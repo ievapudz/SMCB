@@ -1,0 +1,44 @@
+---
+title: "Basic R tutorial"
+date: February 22, 2024
+output: pdf_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# R tutorial (this is a header)
+
+## R basics (this is a second level header)
+
+### Hello world
+
+This is normal text.
+
+This is text including latex symbols like $\phi$ or blocks like:
+
+$$\frac{1}{N-1}\sum_{i=1}^N (x_i - \mu_X)^2$$
+
+Reference guide: [https://www.rstudio.com/wp-content/uploads/2015/03/rmarkdown-reference.pdf](https://www.rstudio.com/wp-content/uploads/2015/03/rmarkdown-reference.pdf)
+
+More information (e.g. html): [https://rmarkdown.rstudio.com/formats.html](https://rmarkdown.rstudio.com/formats.html)
+
+Latex math reference [https://en.wikibooks.org/wiki/LaTeX/Mathematics](https://en.wikibooks.org/wiki/LaTeX/Mathematics)
+
+OCR tool that can produce Latex from screenshots, pictures [https://mathpix.com/](https://mathpix.com/)
+
+Tutorials:
+
+https://static1.squarespace.com/static/5ff2adbe3fe4fe33db902812/t/601cc86d7f828c4792e0bcae/1612499080032/ISLR+Seventh+Printing.pdf
+
+https://moodle-app2.let.ethz.ch/course/view.php?id=627
+
+```{r}
+set.seed(42)
+```
+
+## Render this .rmd into a pdf
+
+```{r, eval=FALSE}
+library(rmarkdown)
+render("1/1.Rmd", pdf_document(TRUE), "1.pdf") # TRUE adds table of content
+```
