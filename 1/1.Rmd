@@ -6,34 +6,56 @@ editor_options:
   chunk_output_type: console
 ---
 
-# R tutorial (this is a header)
+# Problem 3: Learning Bayesian networks from protein data
 
-## R basics (this is a second level header)
+## Preparation to run the code
 
-### Hello world
-
-This is normal text.
-
-This is text including latex symbols like $\phi$ or blocks like:
-
-$$\frac{1}{N-1}\sum_{i=1}^N (x_i - \mu_X)^2$$
-
-Reference guide: [https://www.rstudio.com/wp-content/uploads/2015/03/rmarkdown-reference.pdf](https://www.rstudio.com/wp-content/uploads/2015/03/rmarkdown-reference.pdf)
-
-More information (e.g. html): [https://rmarkdown.rstudio.com/formats.html](https://rmarkdown.rstudio.com/formats.html)
-
-Latex math reference [https://en.wikibooks.org/wiki/LaTeX/Mathematics](https://en.wikibooks.org/wiki/LaTeX/Mathematics)
-
-OCR tool that can produce Latex from screenshots, pictures [https://mathpix.com/](https://mathpix.com/)
-
-Tutorials:
-
-https://static1.squarespace.com/static/5ff2adbe3fe4fe33db902812/t/601cc86d7f828c4792e0bcae/1612499080032/ISLR+Seventh+Printing.pdf
-
-https://moodle-app2.let.ethz.ch/course/view.php?id=627
+Setting seed for reproducibility and loading packages.
 
 ```{r}
 set.seed(42)
+library("GGally")
+library("BiDAG")
+```
+
+## Loading data
+
+```{r}
+data <- read.table("2005_sachs_2_cd3cd28icam2_log_std.csv", sep=",", header=TRUE)
+```
+
+## Variables and observations
+
+```{r}
+num_variables <- ncol(data)
+num_observations <- nrow(data)
+```
+
+## Visualisation of transformed data
+
+TODO: must resize the plot
+
+```{r}
+pair_plot <- ggpairs(data, progress=FALSE)
+pair_plot
+```
+
+## Splitting data
+
+TODO: shuffling might be needed as well
+
+```{r}
+train_size <- ceiling(num_observations*0.8)
+train_data <- data[row.names(data) %in% 1:train_size, ]
+test_data <- data[row.names(data) %in% (train_size+1):nrow(data), ]
+```
+
+```{r}
+init_score <- scoreparameters("bge", train_data)
+```
+
+```{r}
+learnt_BN <- iterativeMCMC(init_score)
 ```
 
 ## Render this .rmd into a pdf
