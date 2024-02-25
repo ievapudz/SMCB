@@ -129,6 +129,7 @@ registerDoParallel(cl)
 ams <- c(10^(-5), 10^(-3), 10^(-1), 10, 10^2)
 
 res <- foreach(am = ams, .combine=c) %dopar% {
+    set.seed(42)
     bgepar <- list(am=am, aw=NULL, edgepf=1)
     numbers_of_edges <- c()
     mean_test_scores <- c()
@@ -153,6 +154,22 @@ stopCluster(cl)
 res_m <- t(matrix(data=res, nrow=5, ncol=3, byrow=TRUE))
 rownames(res_m) <- c("Parameter am", "Average number of edges", "Average BGe score of the test data")
 print(res_m)
+```
+
+## Retraining the best BN 
+
+The best BN (based on the highest BGe score) was the one with $\alpha_m = 10^{-1}$.
+
+```{r}
+set.seed(42)
+bgepar <- list(am=10^(-1), aw=NULL, edgepf=1)
+split_data <- splitting_data(data)
+learnt_BN <- training_BN(split_data, bgepar)
+
+mean_test_score <- testing_BN(split_data, learnt_BN, bgepar)
+print(paste0("Average BGe score on testing data: ", mean_test_score))
+
+plot_DAG(learnt_BN)
 ```
 
 ## Render this .rmd into a pdf
