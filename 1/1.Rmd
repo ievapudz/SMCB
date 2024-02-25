@@ -81,6 +81,12 @@ testing_BN <- function(data, BN, bgepar) {
     return(mean(test_score))
 }
 
+plot_DAG <- function(BN) {
+    library("igraph")
+    g <- graph_from_adjacency_matrix(BN$DAG)
+    plot(g)
+}
+
 get_number_of_edges <- function(BN) {
     library("igraph")
     return(length(E(graph_from_adjacency_matrix(BN$DAG))))
@@ -93,8 +99,11 @@ get_number_of_edges <- function(BN) {
 bgepar <- list(am=1, aw=NULL, edgepf=1)
 split_data <- splitting_data(data)
 learnt_BN <- training_BN(split_data, bgepar)
+
 mean_test_score <- testing_BN(split_data, learnt_BN, bgepar)
 print(paste0("Average BGe score on testing data: ", mean_test_score))
+
+plot_DAG(learnt_BN)
 ```
 
 ## Different parameters
