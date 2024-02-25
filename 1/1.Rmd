@@ -16,6 +16,7 @@ Setting seed for reproducibility and loading packages.
 set.seed(42)
 library("GGally")
 library("BiDAG")
+library("igraph")
 ```
 
 ## Loading data
@@ -67,16 +68,22 @@ splitting_data <- function(data) {
 }
 
 training_BN <- function(data, bgepar) {
+    library("BiDAG")
     init_score_par <- scoreparameters("bge", data$train_data, bgepar)
     learnt_BN <- iterativeMCMC(init_score_par, verbose=FALSE)
-
     return(learnt_BN)
 }
 
 testing_BN <- function(data, BN, bgepar) {
+    library("BiDAG")
     test_score_par <- scoreparameters("bge", data$test_data, bgepar)
     test_score <- scoreagainstDAG(test_score_par, BN$DAG)
     return(mean(test_score))
+}
+
+get_number_of_edges <- function(BN) {
+    library("igraph")
+    return(length(E(graph_from_adjacency_matrix(BN$DAG))))
 }
 ```
 
@@ -107,8 +114,6 @@ registerDoParallel(cl)
 
 ```
 
-TODO: compute average number of edges
-
 TODO: make pretty-printing of results
 
 ```{r}
@@ -116,16 +121,18 @@ ams <- c(10^(-5), 10^(-3), 10^(-1), 10, 10^2)
 
 foreach(am = ams) %dopar% {
     bgepar <- list(am=am, aw=NULL, edgepf=1)
+    numbers_of_edges <- c()
     mean_test_scores <- c()
     for(i in 1:10) {
         RNGkind("L'Ecuyer-CMRG")
-        library("BiDAG")
         split_data <- splitting_data(data)
         learnt_BN <- training_BN(split_data, bgepar)
+        number_of_edges <- get_number_of_edges(learnt_BN)
+        numbers_of_edges <- append(numbers_of_edges, number_of_edges)
         mean_test_score <- testing_BN(split_data, learnt_BN, bgepar)
         mean_test_scores <- append(mean_test_scores, mean_test_score)
     }
-    print(paste(am, mean(mean_test_scores)))
+    print(paste(am, mean(mean_test_scores), mean(numbers_of_edges)))
 }
 ```
 
