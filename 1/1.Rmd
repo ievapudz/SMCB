@@ -13,7 +13,6 @@ editor_options:
 Setting seed for reproducibility and loading packages.
 
 ```{r}
-set.seed(42)
 library("GGally")
 library("BiDAG")
 library("igraph")
@@ -34,12 +33,15 @@ num_observations <- nrow(data)
 
 ## Visualisation of transformed data
 
-TODO: must resize the plot
-
 ```{r}
-pair_plot <- ggpairs(data, progress=FALSE)
-pair_plot
+png(file="plot.png", width=650, height=1000)
+ggpairs(data, progress=FALSE)
+dev.off()
 ```
+
+![Plot of transformed data](plot.png)
+
+\newpage
 
 ## Defining functions
 
@@ -113,8 +115,6 @@ library(parallel)
 library(doParallel)
 ```
 
-TODO: make pretty-printing of results
-
 ```{r}
 # Set the number of cores to use
 num_cores <- detectCores()
@@ -176,5 +176,5 @@ plot_DAG(learnt_BN)
 
 ```{r, eval=FALSE}
 library(rmarkdown)
-render("1/1.Rmd", pdf_document(TRUE), "1.pdf") # TRUE adds table of content
+render("1.Rmd", pdf_document(TRUE), "1.pdf") # TRUE adds table of content
 ```
