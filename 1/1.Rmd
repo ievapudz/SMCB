@@ -113,6 +113,8 @@ library(parallel)
 library(doParallel)
 ```
 
+TODO: make pretty-printing of results
+
 ```{r}
 # Set the number of cores to use
 num_cores <- detectCores()
@@ -120,15 +122,13 @@ num_cores <- detectCores()
 # Register parallel backend
 cl <- makeCluster(num_cores)
 registerDoParallel(cl)
-
 ```
 
-TODO: make pretty-printing of results
-
 ```{r}
+
 ams <- c(10^(-5), 10^(-3), 10^(-1), 10, 10^2)
 
-foreach(am = ams) %dopar% {
+res <- foreach(am = ams, .combine=c) %dopar% {
     bgepar <- list(am=am, aw=NULL, edgepf=1)
     numbers_of_edges <- c()
     mean_test_scores <- c()
@@ -141,12 +141,18 @@ foreach(am = ams) %dopar% {
         mean_test_score <- testing_BN(split_data, learnt_BN, bgepar)
         mean_test_scores <- append(mean_test_scores, mean_test_score)
     }
-    print(paste(am, mean(mean_test_scores), mean(numbers_of_edges)))
+    return(c(am, mean(numbers_of_edges), mean(mean_test_scores)))
 }
 ```
 
 ```{r}
 stopCluster(cl)
+```
+
+```{r}
+res_m <- t(matrix(data=res, nrow=5, ncol=3, byrow=TRUE))
+rownames(res_m) <- c("Parameter am", "Average number of edges", "Average BGe score of the test data")
+print(res_m)
 ```
 
 ## Render this .rmd into a pdf
