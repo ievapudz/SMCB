@@ -51,11 +51,20 @@ test_data <- data[row.names(data) %in% (train_size+1):nrow(data), ]
 ```
 
 ```{r}
-init_score <- scoreparameters("bge", train_data)
+init_score_par <- scoreparameters("bge", train_data)
 ```
 
 ```{r}
-learnt_BN <- iterativeMCMC(init_score)
+learnt_BN <- iterativeMCMC(init_score_par)
+```
+
+```{r}
+test_score_par <- scoreparameters("bge", test_data)
+test_score <- scoreagainstDAG(test_score_par, learnt_BN$DAG)
+```
+
+```{r}
+mean(test_score)
 ```
 
 ## Render this .rmd into a pdf
