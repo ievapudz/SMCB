@@ -40,10 +40,6 @@ pair_plot <- ggpairs(data, progress=FALSE)
 pair_plot
 ```
 
-TODO: execute the following routine with different parameters (10 times for each change of parameter)
-
-TODO: include possibility of parallelization
-
 ## Defining functions
 
 ```{r}
@@ -97,16 +93,44 @@ print(paste0("Average BGe score on testing data: ", mean_test_score))
 ## Different parameters
 
 ```{r}
+library(parallel)
+library(doParallel)
+```
+
+```{r}
+# Set the number of cores to use
+num_cores <- detectCores()
+
+# Register parallel backend
+cl <- makeCluster(num_cores)
+registerDoParallel(cl)
+
+```
+
+TODO: compute average number of edges
+
+TODO: make pretty-printing of results
+
+```{r}
 ams <- c(10^(-5), 10^(-3), 10^(-1), 10, 10^2)
 
-for(am in ams) {
-    print(paste0("Running BN training with a_m: ", am))
+foreach(am = ams) %dopar% {
     bgepar <- list(am=am, aw=NULL, edgepf=1)
-    split_data <- splitting_data(data)
-    learnt_BN <- training_BN(split_data, bgepar)
-    mean_test_score <- testing_BN(split_data, learnt_BN, bgepar)
-    print(paste0("Average BGe score on testing data: ", mean_test_score))
+    mean_test_scores <- c()
+    for(i in 1:10) {
+        RNGkind("L'Ecuyer-CMRG")
+        library("BiDAG")
+        split_data <- splitting_data(data)
+        learnt_BN <- training_BN(split_data, bgepar)
+        mean_test_score <- testing_BN(split_data, learnt_BN, bgepar)
+        mean_test_scores <- append(mean_test_scores, mean_test_score)
+    }
+    print(paste(am, mean(mean_test_scores)))
 }
+```
+
+```{r}
+stopCluster(cl)
 ```
 
 ## Render this .rmd into a pdf
