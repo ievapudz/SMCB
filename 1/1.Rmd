@@ -1,6 +1,6 @@
 ---
-title: "Basic R tutorial"
-date: February 22, 2024
+title: "Project 1"
+date: February 27, 2024
 output: pdf_document
 editor_options: 
   chunk_output_type: console
