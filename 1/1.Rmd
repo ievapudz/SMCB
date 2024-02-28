@@ -1,6 +1,6 @@
 ---
 title: "Project 1"
-date: February 27, 2024
+date: February 28, 2024
 output: pdf_document
 editor_options: 
   chunk_output_type: console
@@ -10,12 +10,15 @@ editor_options:
 
 ## Preparation to run the code
 
-Setting seed for reproducibility and loading packages.
+Setting seed for reproducibility and loading packages. Some packages are additionally loaded 
+inside the functions that are run in parallel.
 
 ```{r}
 library("GGally")
 library("BiDAG")
 library("igraph")
+library("parallel")
+library("doParallel")
 ```
 
 ## Loading data
@@ -29,6 +32,9 @@ data <- read.table("2005_sachs_2_cd3cd28icam2_log_std.csv", sep=",", header=TRUE
 ```{r}
 num_variables <- ncol(data)
 num_observations <- nrow(data)
+
+print(paste("Number of variables:", num_variables))
+print(paste("Number of observations:", num_observations))
 ```
 
 ## Visualisation of transformed data
@@ -95,6 +101,8 @@ get_number_of_edges <- function(BN) {
 }
 ```
 
+\newpage
+
 ## Default parameters
 
 ```{r}
@@ -109,11 +117,6 @@ plot_DAG(learnt_BN)
 ```
 
 ## Different parameters
-
-```{r}
-library(parallel)
-library(doParallel)
-```
 
 ```{r}
 # Set the number of cores to use
@@ -158,7 +161,9 @@ print(res_m)
 
 ## Retraining the best BN 
 
-The best BN (based on the highest BGe score) was the one with $\alpha_m = 10^{-1}$.
+The best BN (based on the highest BGe score) was the one with $\alpha_m = 10^{-1}$. 
+
+We observe that the average number of edges increases with increasing $\alpha_m$.
 
 ```{r}
 set.seed(42)
@@ -176,5 +181,5 @@ plot_DAG(learnt_BN)
 
 ```{r, eval=FALSE}
 library(rmarkdown)
-render("1.Rmd", pdf_document(TRUE), "1.pdf") # TRUE adds table of content
+render("1.Rmd", pdf_document(TRUE), "1.pdf")
 ```
