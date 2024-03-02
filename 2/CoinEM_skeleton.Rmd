@@ -1,0 +1,178 @@
+---
+title: "Project 2 EM Algorithm"
+output: pdf_document
+editor_options: 
+  chunk_output_type: console
+---
+
+In this problem, you will implement the EM algorithm for the coin toss problem in R.
+
+Below we provide you with a skeleton of the algorithm. You can either fill this skeleton with the required functions or write your own version of the EM algorithm. If you choose to do the latter, please also present your results using Rmarkdown in a clear fashion.
+
+```{r}
+set.seed(42)
+```
+
+## (a) Load data
+
+We first read the data stored in the file "coinflip.csv". 
+
+```{r}
+# read the data into D
+D <- read.csv("coinflip.csv")
+D <- as.matrix(D)
+# check the dimension of D
+all(dim(D) == c(200, 100))
+```
+
+## (b) Initialize parameters
+
+Next, we will need to initialize the mixture weights and the probabilities of obtaining heads. You can choose your own values as long as they make sense.
+
+```{r}
+# Number of coins
+k <- 2
+# Mixture weights (a vector of length k)
+lambda <- rep(1, k) / k
+# Probabilities of obtaining heads (a vector of length k)
+theta <- runif(k)
+```
+
+## (c) The EM algorithm
+
+Now we try to implement the EM algorithm. Please write your code in the indicated blocks.
+
+
+```{r}
+##' This function implements the EM algorithm for the coin toss problem
+##' @param D Data matrix of dimensions 100-by-N, where N is the number of observations
+##' @param k Number of coins
+##' @param lambda Vector of mixture weights
+##' @param theta Vector of probabilities of obtaining heads
+##' @param tolerance A threshold used to check convergence
+coin_EM <- function(D, k, lambda, theta, tolerance = 1e-2) {
+  
+  # expected complete-data (hidden) log-likelihood
+  ll_hid <- -Inf
+  # observed log-likelihood
+  ll_obs <- -Inf
+  # difference between two iterations
+  diff <- Inf
+  # number of observations
+  N <- nrow(D)
+  # responsibilities
+  gamma <- matrix(0, nrow = k, ncol = N)
+  # keep track of lambda and theta during the optimisation
+  lambda_all <- lambda
+  theta_all <- theta
+  # iteration number
+  t <- 1
+  
+  # run the E-step and M-step until convergence 
+  while (diff > tolerance) {
+    
+    ############# E-step #############
+    
+    ### YOUR CODE STARTS ###
+    
+    c_P_obs_i_given_CA <- c()
+    c_P_obs_i_given_CB <- c()
+    # Compute the responsibilities
+    for (i in 1:ncol(gamma)) {
+        nheads <- sum(D[i])
+        ntails <- ncol(D) - sum(D[i])
+        P_obs_i_given_CA <- lambda_all[1]*(theta_all[1]^nheads)*((1-theta_all[1])^ntails)
+        P_obs_i_given_CB <- lambda_all[2]*(theta_all[2]^nheads)*((1-theta_all[2])^ntails)
+
+        # Saving likelihoods for the next step
+        c_P_obs_i_given_CA <- c(c_P_obs_i_given_CA, P_obs_i_given_CA)
+        c_P_obs_i_given_CB <- c(c_P_obs_i_given_CB, P_obs_i_given_CB)
+
+        P_obs <- P_obs_i_given_CA+P_obs_i_given_CB
+        # Compute the responsibilities for each observation
+        gamma[, i] <- c(P_obs_i_given_CA/P_obs, P_obs_i_given_CB/P_obs)
+    }
+    
+    # Update expected complete-data (hidden) log-likelihood
+    ll_hid_new <- 0
+    for (i in 1:ncol(gamma)) {
+        ll_hid_new <- ll_hid_new+gamma[1,i]*log(lambda_all[1])+gamma[1,i]*log(c_P_obs_i_given_CA[i])
+        ll_hid_new <- ll_hid_new+gamma[2,i]*log(lambda_all[2])+gamma[2,i]*log(c_P_obs_i_given_CB[i])
+    }
+    
+    ll_hid <- c(ll_hid, ll_hid_new) # keep track of this quantity 
+    
+    # Update observed log-likelihood 
+    
+    ll_obs_new <- log(sum(c_P_obs_i_given_CA))+log(sum(c_P_obs_i_given_CB))
+    ll_obs <- c(ll_obs, ll_obs_new) # keep track of this quantity 
+
+    # Recompute difference between two iterations
+    diff <- abs(ll_obs[t]-ll_obs[t+1])
+    
+    ### YOUR CODE ENDS ###
+    
+    ############# M-step #############
+    
+    ### YOUR CODE STARTS ###
+    
+    # Recompute priors (mixture weights)
+    # ... 
+    
+    lambda_all <- rbind(lambda_all, lambda) # keep track of this quantity 
+    
+    # Recompute probability of heads for each coin
+    # ...
+    
+    theta_all <- rbind(theta_all, theta) # keep track of this quantity 
+
+    ### YOUR CODE ENDS ###
+    t <- t+1
+    
+  }
+  
+  return(list(ll_hid = ll_hid, ll_obs = ll_obs, lambda = lambda, theta = theta, gamma = gamma, lambda_all = lambda_all, theta_all = theta_all))
+  
+}
+```
+
+
+Run the EM algorithm:
+
+```{r}
+res <- coin_EM(D, k, lambda, theta)
+```
+
+
+## (d) Results
+
+Log-likelihood through iterations:
+
+```{r}
+## YOUR CODE ##
+```
+
+Probability of heads through iterations:
+
+```{r}
+## YOUR CODE ##
+```
+
+Mixture weights through iterations:
+
+```{r}
+## YOUR CODE ##
+```
+
+
+Heatmap of responsibilities at final iteration:
+
+```{r}
+## YOUR CODE ##
+```
+
+How many observations belong to each coin?
+
+```{r}
+## YOUR CODE ##
+```
