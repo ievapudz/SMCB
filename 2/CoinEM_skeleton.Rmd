@@ -79,32 +79,39 @@ coin_EM <- function(D, k, lambda, theta, tolerance = 1e-2) {
     c_P_obs_i_given_CB <- c()
     # Compute the responsibilities
     for (i in 1:ncol(gamma)) {
-        nheads <- sum(D[i])
-        ntails <- ncol(D) - sum(D[i])
-        P_obs_i_given_CA <- lambda_all[1]*(theta_all[1]^nheads)*((1-theta_all[1])^ntails)
-        P_obs_i_given_CB <- lambda_all[2]*(theta_all[2]^nheads)*((1-theta_all[2])^ntails)
+        nheads <- sum(D[i,])
+        ntails <- ncol(D) - sum(D[i,])
+        P_obs_i_given_CA <- lambda[1]*(theta[1]^nheads)*((1-theta[1])^ntails)
+        P_obs_i_given_CB <- lambda[2]*(theta[2]^nheads)*((1-theta[2])^ntails)
 
         # Saving likelihoods for the next step
-        c_P_obs_i_given_CA <- c(c_P_obs_i_given_CA, P_obs_i_given_CA)
-        c_P_obs_i_given_CB <- c(c_P_obs_i_given_CB, P_obs_i_given_CB)
+        c_P_obs_i_given_CA <- append(c_P_obs_i_given_CA, P_obs_i_given_CA)
+        c_P_obs_i_given_CB <- append(c_P_obs_i_given_CB, P_obs_i_given_CB)
 
         P_obs <- P_obs_i_given_CA+P_obs_i_given_CB
+        
         # Compute the responsibilities for each observation
         gamma[, i] <- c(P_obs_i_given_CA/P_obs, P_obs_i_given_CB/P_obs)
     }
+
     
     # Update expected complete-data (hidden) log-likelihood
     ll_hid_new <- 0
     for (i in 1:ncol(gamma)) {
-        ll_hid_new <- ll_hid_new+gamma[1,i]*log(lambda_all[1])+gamma[1,i]*log(c_P_obs_i_given_CA[i])
-        ll_hid_new <- ll_hid_new+gamma[2,i]*log(lambda_all[2])+gamma[2,i]*log(c_P_obs_i_given_CB[i])
+        ll_hid_new <- ll_hid_new+gamma[1,i]*log(lambda[1])+gamma[1,i]*log(c_P_obs_i_given_CA[i])
+        ll_hid_new <- ll_hid_new+gamma[2,i]*log(lambda[2])+gamma[2,i]*log(c_P_obs_i_given_CB[i])
     }
     
     ll_hid <- c(ll_hid, ll_hid_new) # keep track of this quantity 
-    
+
+    if(t == 2){
+      print(ll_hid_new)
+    }
+
     # Update observed log-likelihood 
-    
-    ll_obs_new <- log(sum(c_P_obs_i_given_CA))+log(sum(c_P_obs_i_given_CB))
+    l_q <- mean(log(c(gamma[1,], gamma[2,])))
+    #ll_obs_new <- log(sum(c_P_obs_i_given_CA))+log(sum(c_P_obs_i_given_CB))
+    ll_obs_new <- ll_hid_new - l_q
     ll_obs <- c(ll_obs, ll_obs_new) # keep track of this quantity 
 
     # Recompute difference between two iterations
@@ -117,13 +124,30 @@ coin_EM <- function(D, k, lambda, theta, tolerance = 1e-2) {
     ### YOUR CODE STARTS ###
     
     # Recompute priors (mixture weights)
-    # ... 
+    lambda[1] <- mean(gamma[1,])
+    lambda[2] <- mean(gamma[2,])
     
     lambda_all <- rbind(lambda_all, lambda) # keep track of this quantity 
-    
+
     # Recompute probability of heads for each coin
-    # ...
     
+    # Summing gammas at the positions, where the coin turned heads
+    exp_head_counts_CA <- 0
+    exp_tail_counts_CA <- 0
+    exp_head_counts_CB <- 0
+    exp_tail_counts_CB <- 0
+    for (i in 1:nrow(D)) {
+        nheads <- sum(D[i,])
+        ntails <- ncol(D) - sum(D[i,])
+        exp_head_counts_CA <- exp_head_counts_CA + gamma[1,i]*nheads
+        exp_head_counts_CB <- exp_head_counts_CB + gamma[2,i]*nheads
+        exp_tail_counts_CA <- exp_tail_counts_CA + gamma[1,i]*ntails
+        exp_tail_counts_CB <- exp_tail_counts_CB + gamma[2,i]*ntails
+    }
+  
+    theta[1] <- exp_head_counts_CA/(exp_head_counts_CA+exp_tail_counts_CA)
+    theta[2] <- exp_head_counts_CB/(exp_head_counts_CB+exp_tail_counts_CB)
+
     theta_all <- rbind(theta_all, theta) # keep track of this quantity 
 
     ### YOUR CODE ENDS ###
@@ -149,30 +173,32 @@ res <- coin_EM(D, k, lambda, theta)
 Log-likelihood through iterations:
 
 ```{r}
-## YOUR CODE ##
+print(res$ll_obs)
 ```
 
 Probability of heads through iterations:
 
 ```{r}
-## YOUR CODE ##
+print(res$theta_all)
 ```
 
 Mixture weights through iterations:
 
 ```{r}
-## YOUR CODE ##
+print(res$lambda_all)
 ```
 
 
 Heatmap of responsibilities at final iteration:
 
 ```{r}
-## YOUR CODE ##
+heatmap(res$gamma)
 ```
 
 How many observations belong to each coin?
 
 ```{r}
-## YOUR CODE ##
+nobs_CA <- sum(res$gamma[1,] > res$gamma[2,])
+nobs_CB <- sum(res$gamma[1,] < res$gamma[2,])
+print(paste(nobs_CA, nobs_CB))
 ```
