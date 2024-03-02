@@ -228,6 +228,9 @@ ggplot(lambda_data, aes(x=iterations)) +
   theme(text=element_text(size=20))
 ```
 
+Overall, it seems that it took up to 20 iterations for the algorithm to converge to the state 
+similar to the end state (after 47 executed iterations).
+
 ### Heatmap of responsibilities at final iteration:
 
 ```{r}
