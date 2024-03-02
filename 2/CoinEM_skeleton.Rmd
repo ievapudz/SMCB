@@ -10,6 +10,7 @@ In this problem, you will implement the EM algorithm for the coin toss problem i
 Below we provide you with a skeleton of the algorithm. You can either fill this skeleton with the required functions or write your own version of the EM algorithm. If you choose to do the latter, please also present your results using Rmarkdown in a clear fashion.
 
 ```{r}
+library(ggplot2)
 set.seed(42)
 ```
 
@@ -79,34 +80,30 @@ coin_EM <- function(D, k, lambda, theta, tolerance = 1e-2) {
     c_P_obs_i_given_CB <- c()
     # Compute the responsibilities
     for (i in 1:ncol(gamma)) {
-        nheads <- sum(D[i,])
-        ntails <- ncol(D) - sum(D[i,])
-        P_obs_i_given_CA <- lambda[1]*(theta[1]^nheads)*((1-theta[1])^ntails)
-        P_obs_i_given_CB <- lambda[2]*(theta[2]^nheads)*((1-theta[2])^ntails)
+      nheads <- sum(D[i,])
+      ntails <- ncol(D) - sum(D[i,])
+      P_obs_i_given_CA <- lambda[1]*(theta[1]^nheads)*((1-theta[1])^ntails)
+      P_obs_i_given_CB <- lambda[2]*(theta[2]^nheads)*((1-theta[2])^ntails)
 
-        # Saving likelihoods for the next step
-        c_P_obs_i_given_CA <- append(c_P_obs_i_given_CA, P_obs_i_given_CA)
-        c_P_obs_i_given_CB <- append(c_P_obs_i_given_CB, P_obs_i_given_CB)
+      # Saving likelihoods for the next step
+      c_P_obs_i_given_CA <- append(c_P_obs_i_given_CA, P_obs_i_given_CA)
+      c_P_obs_i_given_CB <- append(c_P_obs_i_given_CB, P_obs_i_given_CB)
 
-        P_obs <- P_obs_i_given_CA+P_obs_i_given_CB
-        
-        # Compute the responsibilities for each observation
-        gamma[, i] <- c(P_obs_i_given_CA/P_obs, P_obs_i_given_CB/P_obs)
+      P_obs <- P_obs_i_given_CA+P_obs_i_given_CB
+      
+      # Compute the responsibilities for each observation
+      gamma[, i] <- c(P_obs_i_given_CA/P_obs, P_obs_i_given_CB/P_obs)
     }
 
     
     # Update expected complete-data (hidden) log-likelihood
     ll_hid_new <- 0
     for (i in 1:ncol(gamma)) {
-        ll_hid_new <- ll_hid_new+gamma[1,i]*log(lambda[1])+gamma[1,i]*log(c_P_obs_i_given_CA[i])
-        ll_hid_new <- ll_hid_new+gamma[2,i]*log(lambda[2])+gamma[2,i]*log(c_P_obs_i_given_CB[i])
+      ll_hid_new <- ll_hid_new+gamma[1,i]*log(lambda[1])+gamma[1,i]*log(c_P_obs_i_given_CA[i])
+      ll_hid_new <- ll_hid_new+gamma[2,i]*log(lambda[2])+gamma[2,i]*log(c_P_obs_i_given_CB[i])
     }
     
     ll_hid <- c(ll_hid, ll_hid_new) # keep track of this quantity 
-
-    if(t == 2){
-      print(ll_hid_new)
-    }
 
     # Update observed log-likelihood 
     l_q <- mean(log(c(gamma[1,], gamma[2,])))
@@ -137,12 +134,12 @@ coin_EM <- function(D, k, lambda, theta, tolerance = 1e-2) {
     exp_head_counts_CB <- 0
     exp_tail_counts_CB <- 0
     for (i in 1:nrow(D)) {
-        nheads <- sum(D[i,])
-        ntails <- ncol(D) - sum(D[i,])
-        exp_head_counts_CA <- exp_head_counts_CA + gamma[1,i]*nheads
-        exp_head_counts_CB <- exp_head_counts_CB + gamma[2,i]*nheads
-        exp_tail_counts_CA <- exp_tail_counts_CA + gamma[1,i]*ntails
-        exp_tail_counts_CB <- exp_tail_counts_CB + gamma[2,i]*ntails
+      nheads <- sum(D[i,])
+      ntails <- ncol(D) - sum(D[i,])
+      exp_head_counts_CA <- exp_head_counts_CA + gamma[1,i]*nheads
+      exp_head_counts_CB <- exp_head_counts_CB + gamma[2,i]*nheads
+      exp_tail_counts_CA <- exp_tail_counts_CA + gamma[1,i]*ntails
+      exp_tail_counts_CB <- exp_tail_counts_CB + gamma[2,i]*ntails
     }
   
     theta[1] <- exp_head_counts_CA/(exp_head_counts_CA+exp_tail_counts_CA)
@@ -170,53 +167,71 @@ res <- coin_EM(D, k, lambda, theta)
 
 ## (d) Results
 
-Log-likelihood through iterations:
+### Log-likelihood through iterations
+
+Log-likelihood rapidly increased after the first iteration. Over the remaining
+iterations it converged to the value of around -13000.
 
 ```{r}
-library(ggplot2)
+data <- data.frame(iterations=1:(length(res$ll_obs)-1), 
+  ll_obs=res$ll_obs[2:length(res$ll_obs)]
+)
 
-# Create a data frame with iterations and ll_obs
-data <- data.frame(iterations = 1:(length(res$ll_obs)-1), ll_obs = res$ll_obs[2:length(res$ll_obs)])
-
-# Create the ggplot
-ggplot(data, aes(x = iterations, y = ll_obs)) +
+ggplot(data, aes(x=iterations, y=ll_obs)) +
   geom_line() +
-  labs(x = "Iterations", y = "Log-Likelihood") +
+  labs(x="iteration", y="log-likelihood") +
   theme_minimal() +
-  coord_cartesian(xlim = c(2, length(res$ll_obs))) + 
-  theme(text = element_text(size = 20)) 
-
+  coord_cartesian(xlim=c(2, length(res$ll_obs))) + 
+  theme(text = element_text(size=20)) 
 ```
 
 
-Probability of heads through iterations (blue - coin A; red - coin B)
+### Probability of heads through iterations
+
+Blue curve represents coin A, red curve represents coin B.
+
+The probability of heads for both coins fastly decreased over the first
+iterations (up to around 10). After 10th iteration probability of coin A 
+to turn heads converged to be around 0.45 and of coin B - 0.67.
 
 ```{r}
-#print(res$theta_all)
-# Create a data frame with iterations and theta values
-theta_data <- data.frame(iterations = 1:(length(res$theta_all[,1])), theta_CA = res$theta_all[,1], theta_CB = res$theta_all[,2])
+theta_data <- data.frame(iterations=1:(length(res$theta_all[,1])), 
+  theta_CA=res$theta_all[,1], theta_CB=res$theta_all[,2]
+)
 
-# Create the ggplot
-ggplot(theta_data, aes(x = iterations)) +
-  geom_line(aes(y = theta_CA), color = "blue", linetype = "solid") +
-  geom_line(aes(y = theta_CB), color = "red", linetype = "solid") +
-  labs(x = "Iterations", y = "Probability of Heads") +
+ggplot(theta_data, aes(x=iterations)) +
+  geom_line(aes(y=theta_CA), color="blue", linetype="solid") +
+  geom_line(aes(y=theta_CB), color="red", linetype="solid") +
+  labs(x="iteration", y="probability of heads") +
   theme_minimal() +
-  theme(text = element_text(size = 20))
-     
+  theme(text=element_text(size=20)) +
+  ylim(0, 1.0)
 ```
 
-Mixture weights through iterations:
+### Mixture weights through iterations
+
+Blue curve represents coin A, red curve represents coin B.
+
+The weight of coin A increased in the first iterations to be close to 1. In the next 10 iterations 
+the weight of coin A converged to around 0.85 (weight of coin B converged symmetricaly to around 0.15).
 
 ```{r}
-print(res$lambda_all)
+lambda_data <- data.frame(iterations=1:(length(res$lambda_all[,1])), 
+  lambda_CA=res$lambda_all[,1], lambda_CB=res$lambda_all[,2]
+)
+
+ggplot(lambda_data, aes(x=iterations)) +
+  geom_line(aes(y=lambda_CA), color="blue", linetype="solid") +
+  geom_line(aes(y=lambda_CB), color="red", linetype="solid") +
+  labs(x="iteration", y="mixture weights") +
+  theme_minimal() +
+  theme(text=element_text(size=20))
 ```
 
-
-Heatmap of responsibilities at final iteration:
+### Heatmap of responsibilities at final iteration:
 
 ```{r}
-heatmap(res$gamma)
+heatmap(res$gamma, Colv=NA, Rowv=NA)
 ```
 
 How many observations belong to each coin?
@@ -224,7 +239,8 @@ How many observations belong to each coin?
 ```{r}
 nobs_CA <- sum(res$gamma[1,] > res$gamma[2,])
 nobs_CB <- sum(res$gamma[1,] < res$gamma[2,])
-print(paste(nobs_CA, nobs_CB))
+print(paste("Number of observations belonging to coin A: ", nobs_CA))
+print(paste("Number of observations belonging to coin B: ", nobs_CB))
 ```
 
 ## Render this .rmd into a pdf
