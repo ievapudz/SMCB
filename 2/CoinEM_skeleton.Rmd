@@ -174,6 +174,25 @@ Log-likelihood through iterations:
 
 ```{r}
 print(res$ll_obs)
+print(length(res$ll_obs)-1)
+#ggplot(1:(length(res$ll_obs)-1), res$ll_obs[2:length(res$ll_obs)])
+library(ggplot2)
+
+# Create a data frame with iterations and ll_obs
+data <- data.frame(iterations = 1:(length(res$ll_obs)-1), ll_obs = res$ll_obs[2:length(res$ll_obs)])
+
+# Create the ggplot
+
+
+ggplot(data, aes(x = iterations, y = ll_obs)) +
+  geom_line() +
+  labs(x = "Iterations", y = "Log-Likelihood") +
+  theme_minimal() +
+  coord_cartesian(xlim = c(2, length(res$ll_obs)), ylim = c(0, max(res$ll_obs))) +  # Set aspect ratio to 1 for a square plot
+  theme(text = element_text(size = 20))  # Increase font size to 14
+
+
+
 ```
 
 Probability of heads through iterations:
@@ -201,4 +220,11 @@ How many observations belong to each coin?
 nobs_CA <- sum(res$gamma[1,] > res$gamma[2,])
 nobs_CB <- sum(res$gamma[1,] < res$gamma[2,])
 print(paste(nobs_CA, nobs_CB))
+```
+
+## Render this .rmd into a pdf
+
+```{r, eval=FALSE}
+library(rmarkdown)
+render("CoinEm_skeleton.Rmd", pdf_document(TRUE), "2.pdf")
 ```
