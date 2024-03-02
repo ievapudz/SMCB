@@ -173,32 +173,37 @@ res <- coin_EM(D, k, lambda, theta)
 Log-likelihood through iterations:
 
 ```{r}
-print(res$ll_obs)
-print(length(res$ll_obs)-1)
-#ggplot(1:(length(res$ll_obs)-1), res$ll_obs[2:length(res$ll_obs)])
 library(ggplot2)
 
 # Create a data frame with iterations and ll_obs
 data <- data.frame(iterations = 1:(length(res$ll_obs)-1), ll_obs = res$ll_obs[2:length(res$ll_obs)])
 
 # Create the ggplot
-
-
 ggplot(data, aes(x = iterations, y = ll_obs)) +
   geom_line() +
   labs(x = "Iterations", y = "Log-Likelihood") +
   theme_minimal() +
-  coord_cartesian(xlim = c(2, length(res$ll_obs)), ylim = c(0, max(res$ll_obs))) +  # Set aspect ratio to 1 for a square plot
-  theme(text = element_text(size = 20))  # Increase font size to 14
-
-
+  coord_cartesian(xlim = c(2, length(res$ll_obs))) + 
+  theme(text = element_text(size = 20)) 
 
 ```
 
-Probability of heads through iterations:
+
+Probability of heads through iterations (blue - coin A; red - coin B)
 
 ```{r}
-print(res$theta_all)
+#print(res$theta_all)
+# Create a data frame with iterations and theta values
+theta_data <- data.frame(iterations = 1:(length(res$theta_all[,1])), theta_CA = res$theta_all[,1], theta_CB = res$theta_all[,2])
+
+# Create the ggplot
+ggplot(theta_data, aes(x = iterations)) +
+  geom_line(aes(y = theta_CA), color = "blue", linetype = "solid") +
+  geom_line(aes(y = theta_CB), color = "red", linetype = "solid") +
+  labs(x = "Iterations", y = "Probability of Heads") +
+  theme_minimal() +
+  theme(text = element_text(size = 20))
+     
 ```
 
 Mixture weights through iterations:
