@@ -1,5 +1,6 @@
 ---
-title: "Project 2 EM Algorithm"
+title: "Project 2. EM Algorithm"
+date: March 6, 2024
 output: pdf_document
 editor_options: 
   chunk_output_type: console
@@ -250,5 +251,5 @@ print(paste("Number of observations belonging to coin B: ", nobs_CB))
 
 ```{r, eval=FALSE}
 library(rmarkdown)
-render("CoinEm_skeleton.Rmd", pdf_document(TRUE), "2.pdf")
+render("2.Rmd", pdf_document(TRUE), "2.pdf")
 ```
