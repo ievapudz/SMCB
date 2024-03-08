@@ -1,4 +1,5 @@
 **/*.csv
+**/*.tsv
 **/.DS_Store
 **/*.log
 
