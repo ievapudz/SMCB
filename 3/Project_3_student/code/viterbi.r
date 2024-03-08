@@ -43,6 +43,55 @@ viterbi <- function(E, Tr, I, p) {
     return(p)
 }
 
+assign_row_names <- function(M) {
+    row.names(M) <- c("C", "S", "B", "E", "T", "I", "H", "G")
+    return(M)
+}
+
+assign_col_names <- function(M, aa=TRUE) {
+    if (aa) {
+        colnames(M) <- c("A", "C", "D", "E", "F", "G", "H", "I", "K", "L", "M", "N", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y")
+    } else {
+        colnames(M) <- c("C", "S", "B", "E", "T", "I", "H", "G")
+    }
+    
+    return(M)
+}
+
+init_matrices <- function(data) {
+    # Initialisation of I, T, and E matrices using maximum likelihood
+
+    # I - 8 x 1 matrix - initial state probabilities
+    I <- matrix(0, nrow=8, ncol=1)
+    # T - 8 x 8 matrix - transition probabilities
+    T <- matrix(0, nrow=8, ncol=8)
+    # E - 8 x 20 matrix - emission probabilities
+    E <- matrix(0, nrow=8, ncol=22)
+
+    I <- assign_row_names(I)
+    T <- assign_row_names(T)
+    E <- assign_row_names(E)
+
+    T <- assign_col_names(T, aa=FALSE)
+    E <- assign_col_names(E)
+
+    I <- initial_states(data, I)
+    print(E)
+}
+
+initial_states <- function(data, M) {
+    # Get the third column of the dataframe
+    column <- data[, 3]
+    
+    # Initialize a frequency table
+    frequency <- table(substr(column, 1, 1))
+    
+    # Write values from frequency table into I matrix
+    M[row.names(M) %in% names(frequency), 1] <- as.numeric(frequency)
+
+    # Return initial states matrix
+    return(M)
+}
 
 #' Main function that accepts command-line arguments
 #' @param args a character vector of command-line arguments
@@ -58,7 +107,8 @@ main <- function(args) {
   prot_test_df <- read.csv(paste0(data_folder, "proteins_test.tsv"), header=FALSE, sep="\t")
   prot_new_df <- read.csv(paste0(data_folder, "proteins_new.tsv"), header=FALSE, sep="\t")
 
-  print(head(prot_new_df))
+  init_matrices(prot_train_df)
+
 }
 
 args = commandArgs(trailingOnly=TRUE)
