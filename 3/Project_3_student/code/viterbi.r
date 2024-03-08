@@ -1,5 +1,11 @@
 #!/usr/bin/env Rscript
 
+# Run using:
+# Rscript code/viterbi.r data/
+
+DSSP <- c("C", "S", "B", "E", "T", "I", "H", "G")
+AA <- c("A", "C", "D", "E", "F", "G", "H", "I", "K", "L", "M", "N", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y")
+
 #' @param E n times m matrix with the emission log probabilities of the n latent variables and m observed variables
 #' @param Tr n times n matrix with the transition log probabilities
 #' @param I numeric vector of length n with the initial log probabilities of the n latent variables
@@ -44,15 +50,15 @@ viterbi <- function(E, Tr, I, p) {
 }
 
 assign_row_names <- function(M) {
-    row.names(M) <- c("C", "S", "B", "E", "T", "I", "H", "G")
+    row.names(M) <- DSSP
     return(M)
 }
 
 assign_col_names <- function(M, aa=TRUE) {
     if (aa) {
-        colnames(M) <- c("A", "C", "D", "E", "F", "G", "H", "I", "K", "L", "M", "N", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y")
+        colnames(M) <- AA
     } else {
-        colnames(M) <- c("C", "S", "B", "E", "T", "I", "H", "G")
+        colnames(M) <- DSSP
     }
     
     return(M)
