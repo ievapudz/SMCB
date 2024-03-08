@@ -65,7 +65,7 @@ init_matrices <- function(data) {
     I <- matrix(0, nrow=8, ncol=1)
     # T - 8 x 8 matrix - transition probabilities
     T <- matrix(0, nrow=8, ncol=8)
-    # E - 8 x 20 matrix - emission probabilities
+    # E - 8 x 22 matrix - emission probabilities
     E <- matrix(0, nrow=8, ncol=22)
 
     I <- assign_row_names(I)
@@ -76,18 +76,19 @@ init_matrices <- function(data) {
     E <- assign_col_names(E)
 
     I <- initial_states(data, I)
-    print(E)
+
+    return(list(I=I, T=T, E=E))
 }
 
 initial_states <- function(data, M) {
-    # Get the third column of the dataframe
+    # Retrieving DSSP profiles
     column <- data[, 3]
     
-    # Initialize a frequency table
+    # Computing frequencies of each letter in the first position
     frequency <- table(substr(column, 1, 1))
-    
-    # Write values from frequency table into I matrix
-    M[row.names(M) %in% names(frequency), 1] <- as.numeric(frequency)
+
+    # Computing relative frequencies
+    M[row.names(M) %in% names(frequency), 1] <- as.numeric(frequency)/sum(frequency)
 
     # Return initial states matrix
     return(M)
@@ -107,7 +108,7 @@ main <- function(args) {
   prot_test_df <- read.csv(paste0(data_folder, "proteins_test.tsv"), header=FALSE, sep="\t")
   prot_new_df <- read.csv(paste0(data_folder, "proteins_new.tsv"), header=FALSE, sep="\t")
 
-  init_matrices(prot_train_df)
+  params <- init_matrices(prot_train_df)
 
 }
 
