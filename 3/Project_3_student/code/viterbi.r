@@ -83,6 +83,7 @@ init_matrices <- function(data) {
 
     I <- initial_states(data, I)
     T <- transition_states(data, T)
+    E <- emission_states(data, E)
 
     return(list(I=I, T=T, E=E))
 }
@@ -107,6 +108,34 @@ transition_states <- function(data, M) {
     
     pairs <- lapply(column, function(x) substring(x, first=1:(nchar(x)-1), last=2:nchar(x)))
     frequencies <- table(unlist(pairs))
+
+    # Computing and assigning relative frequencies
+    for (i in seq(nrow(M))) {
+        for (j in seq(ncol(M))) {
+            row_name <- row.names(M)[i]
+            col_name <- colnames(M)[j]
+            freq_name <- paste0(row_name, col_name)
+            if (is.na(frequencies[freq_name])) {
+                M[i, j] <- 0
+            } else {
+                M[i, j] <- as.numeric(frequencies[freq_name])/sum(frequencies)
+            }
+        }
+    }
+
+    # Return initial states matrix
+    return(M)
+}
+
+emission_states <- function(data, M) {
+    # Retrieving profiles
+    aa <- data[, 2]
+    dssp <- data[, 3]
+
+    aa_list <- lapply(aa, function(x) substring(x, first=1:(nchar(x)), last=1:nchar(x)))
+    dssp_list <- lapply(dssp, function(x) substring(x, first=1:(nchar(x)), last=1:nchar(x)))
+    
+    frequencies <- table(paste(unlist(dssp_list), unlist(aa_list), sep = ""))
 
     # Computing and assigning relative frequencies
     for (i in seq(nrow(M))) {
