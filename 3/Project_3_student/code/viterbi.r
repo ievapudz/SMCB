@@ -3,6 +3,8 @@
 # Run using:
 # Rscript code/viterbi.r data/
 
+library(dplyr)
+
 DSSP <- c("C", "S", "B", "E", "T", "I", "H", "G")
 AA <- c("A", "C", "D", "E", "F", "G", "H", "I", "K", "L", "M", "N", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y")
 
@@ -63,6 +65,8 @@ assign_col_names <- function(M, aa=TRUE) {
     
     return(M)
 }
+
+# TODO: check what could be wrong with initialisation because retrieved predictions are nonsense
 
 init_matrices <- function(data) {
     # Initialisation of I, T, and E matrices using maximum likelihood
@@ -158,19 +162,25 @@ emission_states <- function(data, M) {
 #' Main function that accepts command-line arguments
 #' @param args a character vector of command-line arguments
 main <- function(args) {
-  # Parse command-line arguments
-  if (length(args) != 1) {
-    stop("Invalid number of arguments. Usage: Rscript viterbi.r <data_folder>")
-  }
-  data_folder <- args[1]
-  
-  # Loading data
-  prot_train_df <- read.csv(paste0(data_folder, "proteins_train.tsv"), header=FALSE, sep="\t")
-  prot_test_df <- read.csv(paste0(data_folder, "proteins_test.tsv"), header=FALSE, sep="\t")
-  prot_new_df <- read.csv(paste0(data_folder, "proteins_new.tsv"), header=FALSE, sep="\t")
+    # Parse command-line arguments
+    if (length(args) != 1) {
+        stop("Invalid number of arguments. Usage: Rscript viterbi.r <data_folder>")
+    }
+    data_folder <- args[1]
+    
+    # Loading data
+    prot_train_df <- read.csv(paste0(data_folder, "proteins_train.tsv"), header=FALSE, sep="\t")
+    prot_test_df <- read.csv(paste0(data_folder, "proteins_test.tsv"), header=FALSE, sep="\t")
+    prot_new_df <- read.csv(paste0(data_folder, "proteins_new.tsv"), header=FALSE, sep="\t")
 
-  params <- init_matrices(prot_train_df)
+    # Initialisation of parameters
+    params <- init_matrices(prot_train_df)
 
+    pred_df <- data.frame(SeqId=prot_test_df[, 1], AminoAcids=prot_test_df[, 2], PredictedStructure=NA)
+    pred_df <- apply(pred_df, 1, function(row) {
+        viterbi(params$E, params$T, params$I, data.frame(AminoAcids=row["AminoAcids"]))
+    })
+    print(pred_df)
 }
 
 args = commandArgs(trailingOnly=TRUE)
