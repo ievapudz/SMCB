@@ -95,7 +95,7 @@ initial_states <- function(data, M) {
     frequency <- table(substr(column, 1, 1))
 
     # Computing relative frequencies
-    #M[row.names(M) %in% names(frequency), 1] <- as.numeric(frequency)/sum(frequency)
+    M[row.names(M) %in% names(frequency), 1] <- as.numeric(frequency)/sum(frequency)
 
     # Return initial states matrix
     return(M)
@@ -105,14 +105,24 @@ transition_states <- function(data, M) {
     # Retrieving DSSP profiles
     column <- data[, 3]
     
-    frequencies <- table(unlist(lapply(column, function(x) substring(x, first = 1:(nchar(x) - 1), last = 2:nchar(x)))))
+    pairs <- lapply(column, function(x) substring(x, first=1:(nchar(x)-1), last=2:nchar(x)))
+    frequencies <- table(unlist(pairs))
 
-    # Convert frequencies into table
-    M[row.names(M) %in% names(frequencies), ] <- as.matrix(frequencies)
+    # Computing and assigning relative frequencies
+    for (i in seq(nrow(M))) {
+        for (j in seq(ncol(M))) {
+            row_name <- row.names(M)[i]
+            col_name <- colnames(M)[j]
+            freq_name <- paste0(row_name, col_name)
+            if (is.na(frequencies[freq_name])) {
+                M[i, j] <- 0
+            } else {
+                M[i, j] <- as.numeric(frequencies[freq_name])/sum(frequencies)
+            }
+        }
+    }
 
-    print(M)
-
-    # Return transition states matrix
+    # Return initial states matrix
     return(M)
 }
 
