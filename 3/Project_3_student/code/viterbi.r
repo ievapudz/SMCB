@@ -66,17 +66,15 @@ assign_col_names <- function(M, aa=TRUE) {
     return(M)
 }
 
-# TODO: check what could be wrong with initialisation because retrieved predictions are nonsense
-
 init_matrices <- function(data) {
     # Initialisation of I, T, and E matrices using maximum likelihood
 
     # I - 8 x 1 matrix - initial state probabilities
-    I <- matrix(0, nrow=8, ncol=1)
+    I <- matrix(0, nrow=length(DSSP), ncol=1)
     # T - 8 x 8 matrix - transition probabilities
-    T <- matrix(0, nrow=8, ncol=8)
+    T <- matrix(0, nrow=length(DSSP), ncol=length(DSSP))
     # E - 8 x 22 matrix - emission probabilities
-    E <- matrix(0, nrow=8, ncol=22)
+    E <- matrix(0, nrow=length(DSSP), ncol=length(AA))
 
     I <- assign_row_names(I)
     T <- assign_row_names(T)
@@ -88,6 +86,11 @@ init_matrices <- function(data) {
     I <- initial_states(data, I)
     T <- transition_states(data, T)
     E <- emission_states(data, E)
+
+    # TODO: understand, why we need to take log of matrices?
+    I <- log(I)
+    T <- log(T)
+    E <- log(E)
 
     return(list(I=I, T=T, E=E))
 }
