@@ -173,15 +173,20 @@ run_predictions <- function(data, params) {
     })
     pred_df <- data.frame(t(sapply(pred_df, function(x) x[1:max(lengths(pred_df))])))
     data$PredictedStructure <- pred_df$PredictedStructure
+    data <- apply(data, 2, as.character)
     return(data)
+}
+
+save_to_tsv <- function(data, file_path) {
+    write.table(data, file=file_path, sep="\t", row.names=FALSE, col.names=FALSE)
 }
 
 #' Main function that accepts command-line arguments
 #' @param args a character vector of command-line arguments
 main <- function(args) {
     # Parse command-line arguments
-    if (length(args) != 1) {
-        stop("Invalid number of arguments. Usage: Rscript viterbi.r <data_folder>")
+    if (length(args) != 2) {
+        stop("Invalid number of arguments. Usage: Rscript viterbi.r <data_folder> <predictions_tsv>")
     }
     data_folder <- args[1]
     
@@ -195,7 +200,10 @@ main <- function(args) {
 
     # Making predictions
     prot_test_df <- run_predictions(prot_test_df, params)
-    prot_new_df <- run_predictions(prot_new_df, params)    
+    prot_new_df <- run_predictions(prot_new_df, params)
+
+    # Saving predictions
+    save_to_tsv(prot_new_df, args[2])  
 }
 
 args = commandArgs(trailingOnly=TRUE)
