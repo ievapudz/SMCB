@@ -188,6 +188,12 @@ get_bootstrapped_data <- function(data) {
     return(bootstrapped_data)
 }
 
+process_bootstrap_params <- function(boot_params, params, n_boot) {
+    boot_params <- array(unlist(boot_params), dim=c(dim(params), n_boot))
+    dimnames(boot_params) <- list(rownames(params), colnames(params), NULL)
+    return(boot_params)
+}
+
 #' Main function that accepts command-line arguments
 #' @param args a character vector of command-line arguments
 main <- function(args) {
@@ -214,10 +220,22 @@ main <- function(args) {
 
     # Bootstrapping for parameter CFs
     # TODO: change the number of bootstraps
-    for (i in 1:2) {
+    N_BOOT <- 4
+    boot_params <- list(I=list(), T=list(), E=list())
+
+    for (i in 1:N_BOOT) {
         boot_data <- get_bootstrapped_data(prot_train_df)
         params <- init_matrices(boot_data)
-    }    
+
+        boot_params$I <- list(boot_params$I, params$I)
+        boot_params$T <- list(boot_params$T, params$T)
+        boot_params$E <- list(boot_params$E, params$E)
+    }
+    
+    boot_params$I <- process_bootstrap_params(boot_params$I, params$I, N_BOOT)
+    boot_params$T <- process_bootstrap_params(boot_params$T, params$T, N_BOOT)
+    boot_params$E <- process_bootstrap_params(boot_params$E, params$E, N_BOOT)
+    
     
 }
 
