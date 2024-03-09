@@ -53,6 +53,14 @@ viterbi <- function(E, Tr, I, p) {
     return(p)
 }
 
+loading_data <- function(data_file, sec_struct) {
+    col_names <- c('SeqID', 'AminoAcids')
+    if(sec_struct) { col_names <- append(col_names, 'SecondaryStructure')}
+    data_df <- read.csv(data_file, header=FALSE, sep="\t")
+    names(data_df) <- col_names
+    return(data_df)
+}
+
 assign_row_names <- function(M) {
     row.names(M) <- DSSP
     return(M)
@@ -168,7 +176,7 @@ emission_states <- function(data, M) {
     return(M)
 }
 
-run_predictions <- function(data, params) {
+run_viterbi_predictions <- function(data, params) {
     pred_df <- data.frame(AminoAcids=data[, 2], PredictedStructure=NA)
     pred_df <- apply(pred_df, 1, function(row) {
         viterbi(params$E, params$T, params$I, data.frame(AminoAcids=row["AminoAcids"]))
@@ -179,8 +187,23 @@ run_predictions <- function(data, params) {
     return(data)
 }
 
+run_random_predictions <- function(data, params) {
+    rand_struct <- apply(data, 1, function(row) {
+        paste0(sample(DSSP, nchar(row["AminoAcids"]), replace=TRUE), collapse="")
+    })
+    data <- cbind(data, RandomStructure=rand_struct)
+    return(data)
+}
+
 save_to_tsv <- function(data, file_path) {
     write.table(data, file=file_path, sep="\t", row.names=FALSE, col.names=FALSE)
+}
+
+get_accuracies <- function(pred_df, column_name) {
+    accuracies <- apply(pred_df, 1, function(row) {
+        sum(strsplit(row["SecondaryStructure"], "")[[1]] == strsplit(row[column_name], "")[[1]]) / nchar(row["SecondaryStructure"])
+    })
+    print(summary(accuracies))
 }
 
 get_bootstrapped_data <- function(data) {
@@ -204,19 +227,28 @@ main <- function(args) {
     data_folder <- args[1]
     
     # Loading data
-    prot_train_df <- read.csv(paste0(data_folder, "proteins_train.tsv"), header=FALSE, sep="\t")
-    prot_test_df <- read.csv(paste0(data_folder, "proteins_test.tsv"), header=FALSE, sep="\t")
-    prot_new_df <- read.csv(paste0(data_folder, "proteins_new.tsv"), header=FALSE, sep="\t")
+    prot_train_df <- loading_data(paste0(data_folder, "proteins_train.tsv"), sec_struct=TRUE)
+    prot_test_df <- loading_data(paste0(data_folder, "proteins_test.tsv"), sec_struct=TRUE)
+    prot_new_df <- loading_data(paste0(data_folder, "proteins_new.tsv"), sec_struct=FALSE)
 
     # Initialisation of parameters
     params <- init_matrices(prot_train_df)
 
     # Making predictions
-    prot_test_df <- run_predictions(prot_test_df, params)
-    prot_new_df <- run_predictions(prot_new_df, params)
+    prot_test_df <- run_viterbi_predictions(prot_test_df, params)
+    prot_new_df <- run_viterbi_predictions(prot_new_df, params)
 
     # Saving predictions
     save_to_tsv(prot_new_df, args[2])
+
+    # Computing prediction accuracies
+    print("Accuracy statistics of Viterbi predictions:")
+    get_accuracies(prot_test_df, column_name="PredictedStructure")
+
+    # Making random "predictions"
+    prot_test_df <- run_random_predictions(prot_test_df, params)
+    print("Accuracy statistics of random 'predictions':")
+    get_accuracies(prot_test_df, column_name="RandomStructure")
 
     # Bootstrapping for parameter CFs
     # TODO: change the number of bootstraps
@@ -236,7 +268,7 @@ main <- function(args) {
     boot_params$T <- process_bootstrap_params(boot_params$T, params$T, N_BOOT)
     boot_params$E <- process_bootstrap_params(boot_params$E, params$E, N_BOOT)
     
-    
+    # TODO: confidence interval computation of all parameters in each of the matrices
 }
 
 args = commandArgs(trailingOnly=TRUE)
