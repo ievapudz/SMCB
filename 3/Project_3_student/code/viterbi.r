@@ -3,7 +3,7 @@
 # Run using:
 # Rscript code/viterbi.r data/
 
-library(dplyr)
+suppressPackageStartupMessages(library(dplyr))
 # TODO: suppress messages of package loading
 set.seed(42)
 
