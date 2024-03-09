@@ -5,7 +5,7 @@
 
 library(dplyr)
 
-DSSP <- c("C", "S", "B", "E", "T", "I", "H", "G")
+DSSP <- c("B", "C", "E", "G", "H", "I", "S", "T")
 AA <- c("A", "C", "D", "E", "F", "G", "H", "I", "K", "L", "M", "N", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y")
 
 #' @param E n times m matrix with the emission log probabilities of the n latent variables and m observed variables
@@ -113,21 +113,23 @@ transition_states <- function(data, M) {
     pairs <- lapply(column, function(x) substring(x, first=1:(nchar(x)-1), last=2:nchar(x)))
     frequencies <- table(unlist(pairs))
 
-    # Computing and assigning relative frequencies
+    # Assigning frequencies
     for (i in seq(nrow(M))) {
         for (j in seq(ncol(M))) {
             row_name <- row.names(M)[i]
             col_name <- colnames(M)[j]
             freq_name <- paste0(row_name, col_name)
             if (is.na(frequencies[freq_name])) {
-                M[i, j] <- 0
+                M[i, j] <- 1
             } else {
-                M[i, j] <- as.numeric(frequencies[freq_name])/sum(frequencies)
+                M[i, j] <- as.numeric(frequencies[freq_name])+1
             }
         }
     }
+    # Relative frequencies
+    M <- M/rowSums(M)
 
-    # Return initial states matrix
+    # Return transition states matrix
     return(M)
 }
 
@@ -141,19 +143,21 @@ emission_states <- function(data, M) {
     
     frequencies <- table(paste(unlist(dssp_list), unlist(aa_list), sep = ""))
 
-    # Computing and assigning relative frequencies
+    # Assigning frequencies
     for (i in seq(nrow(M))) {
         for (j in seq(ncol(M))) {
             row_name <- row.names(M)[i]
             col_name <- colnames(M)[j]
             freq_name <- paste0(row_name, col_name)
             if (is.na(frequencies[freq_name])) {
-                M[i, j] <- 0
+                M[i, j] <- 1
             } else {
-                M[i, j] <- as.numeric(frequencies[freq_name])/sum(frequencies)
+                M[i, j] <- as.numeric(frequencies[freq_name])+1
             }
         }
     }
+    # Relative frequencies
+    M <- M/rowSums(M)
 
     # Return initial states matrix
     return(M)
@@ -174,9 +178,9 @@ main <- function(args) {
     prot_new_df <- read.csv(paste0(data_folder, "proteins_new.tsv"), header=FALSE, sep="\t")
 
     # Initialisation of parameters
-    params <- init_matrices(prot_train_df)
+    params <- init_matrices(prot_test_df)
 
-    pred_df <- data.frame(SeqId=prot_test_df[, 1], AminoAcids=prot_test_df[, 2], PredictedStructure=NA)
+    pred_df <- data.frame(SeqId=prot_train_df[, 1], AminoAcids=prot_test_df[, 2], PredictedStructure=NA)
     pred_df <- apply(pred_df, 1, function(row) {
         viterbi(params$E, params$T, params$I, data.frame(AminoAcids=row["AminoAcids"]))
     })
