@@ -166,6 +166,16 @@ emission_states <- function(data, M) {
     return(M)
 }
 
+run_predictions <- function(data, params) {
+    pred_df <- data.frame(AminoAcids=data[, 2], PredictedStructure=NA)
+    pred_df <- apply(pred_df, 1, function(row) {
+        viterbi(params$E, params$T, params$I, data.frame(AminoAcids=row["AminoAcids"]))
+    })
+    pred_df <- data.frame(t(sapply(pred_df, function(x) x[1:max(lengths(pred_df))])))
+    data$PredictedStructure <- pred_df$PredictedStructure
+    return(data)
+}
+
 #' Main function that accepts command-line arguments
 #' @param args a character vector of command-line arguments
 main <- function(args) {
@@ -183,11 +193,9 @@ main <- function(args) {
     # Initialisation of parameters
     params <- init_matrices(prot_test_df)
 
-    pred_df <- data.frame(SeqId=prot_train_df[, 1], AminoAcids=prot_test_df[, 2], PredictedStructure=NA)
-    pred_df <- apply(pred_df, 1, function(row) {
-        viterbi(params$E, params$T, params$I, data.frame(AminoAcids=row["AminoAcids"]))
-    })
-    print(pred_df)
+    # Making predictions
+    prot_test_df <- run_predictions(prot_test_df, params)
+    prot_new_df <- run_predictions(prot_new_df, params)    
 }
 
 args = commandArgs(trailingOnly=TRUE)
