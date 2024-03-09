@@ -4,6 +4,8 @@
 # Rscript code/viterbi.r data/
 
 library(dplyr)
+# TODO: suppress messages of package loading
+set.seed(42)
 
 DSSP <- c("B", "C", "E", "G", "H", "I", "S", "T")
 AA <- c("A", "C", "D", "E", "F", "G", "H", "I", "K", "L", "M", "N", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y")
@@ -181,6 +183,11 @@ save_to_tsv <- function(data, file_path) {
     write.table(data, file=file_path, sep="\t", row.names=FALSE, col.names=FALSE)
 }
 
+get_bootstrapped_data <- function(data) {
+    bootstrapped_data <- slice_sample(data, n=nrow(data), replace=TRUE)
+    return(bootstrapped_data)
+}
+
 #' Main function that accepts command-line arguments
 #' @param args a character vector of command-line arguments
 main <- function(args) {
@@ -196,14 +203,22 @@ main <- function(args) {
     prot_new_df <- read.csv(paste0(data_folder, "proteins_new.tsv"), header=FALSE, sep="\t")
 
     # Initialisation of parameters
-    params <- init_matrices(prot_test_df)
+    params <- init_matrices(prot_train_df)
 
     # Making predictions
     prot_test_df <- run_predictions(prot_test_df, params)
     prot_new_df <- run_predictions(prot_new_df, params)
 
     # Saving predictions
-    save_to_tsv(prot_new_df, args[2])  
+    save_to_tsv(prot_new_df, args[2])
+
+    # Bootstrapping for parameter CFs
+    # TODO: change the number of bootstraps
+    for (i in 1:2) {
+        boot_data <- get_bootstrapped_data(prot_train_df)
+        params <- init_matrices(boot_data)
+    }    
+    
 }
 
 args = commandArgs(trailingOnly=TRUE)
