@@ -107,10 +107,10 @@ init_matrices <- function(data) {
 
 initial_states <- function(data, M) {
     # Retrieving DSSP profiles
-    column <- data[, 3]
+    sec_struct <- data$SecondaryStructure
     
     # Computing frequencies of each letter in the first position
-    frequency <- table(substr(column, 1, 1))
+    frequency <- table(substr(sec_struct, 1, 1))
 
     # Computing relative frequencies
     M[row.names(M) %in% names(frequency), 1] <- as.numeric(frequency)/sum(frequency)
@@ -121,9 +121,9 @@ initial_states <- function(data, M) {
 
 transition_states <- function(data, M) {
     # Retrieving DSSP profiles
-    column <- data[, 3]
+    sec_struct <- data$SecondaryStructure
     
-    pairs <- lapply(column, function(x) substring(x, first=1:(nchar(x)-1), last=2:nchar(x)))
+    pairs <- lapply(sec_struct, function(x) substring(x, first=1:(nchar(x)-1), last=2:nchar(x)))
     frequencies <- table(unlist(pairs))
 
     # Assigning frequencies
@@ -148,13 +148,13 @@ transition_states <- function(data, M) {
 
 emission_states <- function(data, M) {
     # Retrieving profiles
-    aa <- data[, 2]
-    dssp <- data[, 3]
+    aa <- data$AminoAcids
+    dssp <- data$SecondaryStructure
 
     aa_list <- lapply(aa, function(x) substring(x, first=1:(nchar(x)), last=1:nchar(x)))
     dssp_list <- lapply(dssp, function(x) substring(x, first=1:(nchar(x)), last=1:nchar(x)))
     
-    frequencies <- table(paste(unlist(dssp_list), unlist(aa_list), sep = ""))
+    frequencies <- table(paste(unlist(dssp_list), unlist(aa_list), sep=""))
 
     # Assigning frequencies
     for (i in seq(nrow(M))) {
@@ -177,7 +177,7 @@ emission_states <- function(data, M) {
 }
 
 run_viterbi_predictions <- function(data, params) {
-    pred_df <- data.frame(AminoAcids=data[, 2], PredictedStructure=NA)
+    pred_df <- data.frame(AminoAcids=data$AminoAcids, PredictedStructure=NA)
     pred_df <- apply(pred_df, 1, function(row) {
         viterbi(params$E, params$T, params$I, data.frame(AminoAcids=row["AminoAcids"]))
     })
