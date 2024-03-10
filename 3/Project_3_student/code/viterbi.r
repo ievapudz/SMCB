@@ -238,6 +238,54 @@ process_bootstrap_params <- function(boot_params, params, n_boot) {
     return(boot_params)
 }
 
+compute_CI <- function(boot_params) {
+    n_values <- dim(boot_params)[1] * dim(boot_params)[2]
+    lower_CI <- matrix(NA, nrow=dim(boot_params)[1], ncol=dim(boot_params)[2])
+    upper_CI <- matrix(NA, nrow=dim(boot_params)[1], ncol=dim(boot_params)[2])
+
+    mapply(function(i) {
+        mapply(function(i, j) {
+            values <- boot_params[i, j, ]
+            lower <- quantile(values, 0.025)
+            upper <- quantile(values, 0.975)
+            lower_CI[i, j] <<- lower
+            upper_CI[i, j] <<- upper
+        }, i, 1:dim(boot_params)[2])
+    }, 1:dim(boot_params)[1])
+
+    # Collecting CIs
+    CI <- matrix(NA, nrow=dim(lower_CI)[1], ncol=2)
+    if(dim(lower_CI)[2] == 1) {
+        CI[, 1] <- lower_CI
+        CI[, 2] <- upper_CI
+    } else {
+        mapply(function(i) {
+                CI[i, 1] <<- lower_CI[i, i]
+                CI[i, 2] <<- upper_CI[i, i]
+            }, 1:dim(lower_CI)[1]
+        )
+    }
+
+    # TODO: maybe edit to return CIs for all parameters? Not only the diagonal ones?
+
+    return(CI)
+}
+
+collect_CI <- function(lower_CI, upper_CI) {
+    CI <- matrix(NA, nrow=dim(lower_CI)[1], ncol=2)
+    if(dim(lower_CI)[2] == 1) {
+        CI[, 1] <- lower_CI
+        CI[, 2] <- upper_CI
+    } else {
+        mapply(function(i) {
+                CI[i, 1] <<- lower_CI[i, i]
+                CI[i, 2] <<- upper_CI[i, i]
+            }, 1:dim(lower_CI)[1]
+        )
+    }
+    print(CI)
+}
+
 #' Main function that accepts command-line arguments
 #' @param args a character vector of command-line arguments
 main <- function(args) {
@@ -277,7 +325,7 @@ main <- function(args) {
 
     # Bootstrapping for parameter CFs
     # TODO: change the number of bootstraps
-    N_BOOT <- 1
+    N_BOOT <- 10
     boot_params <- list(I=list(), T=list(), E=list())
 
     for (i in 1:N_BOOT) {
@@ -292,8 +340,14 @@ main <- function(args) {
     boot_params$I <- process_bootstrap_params(boot_params$I, params$I, N_BOOT)
     boot_params$T <- process_bootstrap_params(boot_params$T, params$T, N_BOOT)
     boot_params$E <- process_bootstrap_params(boot_params$E, params$E, N_BOOT)
-    
-    # TODO: confidence interval computation of all parameters in each of the matrices
+
+    # Computing confidence intervals for parameter matrices
+    CI_I <- compute_CI(exp(boot_params$I))
+    CI_T <- compute_CI(exp(boot_params$T))
+    CI_E <- compute_CI(exp(boot_params$E))
+    print(CI_I)
+    print(CI_T)
+    print(CI_E)
 }
 
 args = commandArgs(trailingOnly=TRUE)
