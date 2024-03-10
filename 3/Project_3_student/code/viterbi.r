@@ -1,10 +1,9 @@
 #!/usr/bin/env Rscript
 
 # Run using:
-# Rscript code/viterbi.r data/
+# Rscript code/viterbi.r data/ proteins_new.tsv
 
 suppressPackageStartupMessages(library(dplyr))
-# TODO: suppress messages of package loading
 set.seed(42)
 
 DSSP <- c("B", "C", "E", "G", "H", "I", "S", "T")
@@ -176,6 +175,28 @@ emission_states <- function(data, M) {
     return(M)
 }
 
+eigen_stationary_distribution <- function(T) {
+    # T transposed to get left eigenvectors of T
+    e <- eigen(t(exp(T)))
+    e_vec <- e$vectors
+    e_val <- e$values
+    e_val_one_index <- which(abs(e_val-1) < 1e-12)
+    stat_dist <- matrix(e_vec[, e_val_one_index]/ sum(e_vec[, e_val_one_index]), nrow=1, ncol=length(DSSP))
+    colnames(stat_dist) <- DSSP
+    print("Stationary distribution of transmission probabilities (eigenvalue approach): ")
+    print(stat_dist)
+    return(stat_dist)
+}
+
+brute_force_stationary_distribution <- function(T) {
+    T <- exp(T)
+    while (sum(abs(T[1,]-T[2,])) > 1e-12) {
+        T <- T %*% T
+    }
+    print("Stationary distribution of transmission probabilities (brute-force approach): ")
+    print(T[1,])
+}
+
 run_viterbi_predictions <- function(data, params) {
     pred_df <- data.frame(AminoAcids=data$AminoAcids, PredictedStructure=NA)
     pred_df <- apply(pred_df, 1, function(row) {
@@ -234,6 +255,10 @@ main <- function(args) {
     # Initialisation of parameters
     params <- init_matrices(prot_train_df)
 
+    # Stationary distribution
+    eigen_stationary_distribution(params$T)
+    brute_force_stationary_distribution(params$T)
+
     # Making predictions
     prot_test_df <- run_viterbi_predictions(prot_test_df, params)
     prot_new_df <- run_viterbi_predictions(prot_new_df, params)
@@ -252,7 +277,7 @@ main <- function(args) {
 
     # Bootstrapping for parameter CFs
     # TODO: change the number of bootstraps
-    N_BOOT <- 4
+    N_BOOT <- 1
     boot_params <- list(I=list(), T=list(), E=list())
 
     for (i in 1:N_BOOT) {
