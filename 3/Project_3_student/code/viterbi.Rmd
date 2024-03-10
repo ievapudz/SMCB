@@ -1,14 +1,25 @@
-#!/usr/bin/env Rscript
+---
+title: "Project 3. Viterbi algorithm"
+date: March 10, 2024
+output: pdf_document
+editor_options: 
+  chunk_output_type: console
+---
 
-# Run using:
-# Rscript code/viterbi.r data/ proteins_new.tsv
-
+```{r}
 suppressPackageStartupMessages(library(dplyr))
 set.seed(42)
-
+```
+```{r}
 DSSP <- c("B", "C", "E", "G", "H", "I", "S", "T")
-AA <- c("A", "C", "D", "E", "F", "G", "H", "I", "K", "L", "M", "N", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y")
+AA <- c("A", "C", "D", "E", "F", "G", "H", "I", "K", 
+    "L", "M", "N", "P", "Q", "R", "S", "T", "U", 
+    "V", "W", "X", "Y"
+)
+data_folder <- "../data/"
+```
 
+```{r}
 #' @param E n times m matrix with the emission log probabilities of the n latent variables and m observed variables
 #' @param Tr n times n matrix with the transition log probabilities
 #' @param I numeric vector of length n with the initial log probabilities of the n latent variables
@@ -122,7 +133,9 @@ transition_states <- function(data, M) {
     # Retrieving DSSP profiles
     sec_struct <- data$SecondaryStructure
     
-    pairs <- lapply(sec_struct, function(x) substring(x, first=1:(nchar(x)-1), last=2:nchar(x)))
+    pairs <- lapply(sec_struct, 
+        function(x) substring(x, first=1:(nchar(x)-1), last=2:nchar(x))
+    )
     frequencies <- table(unlist(pairs))
 
     # Assigning frequencies
@@ -150,8 +163,12 @@ emission_states <- function(data, M) {
     aa <- data$AminoAcids
     dssp <- data$SecondaryStructure
 
-    aa_list <- lapply(aa, function(x) substring(x, first=1:(nchar(x)), last=1:nchar(x)))
-    dssp_list <- lapply(dssp, function(x) substring(x, first=1:(nchar(x)), last=1:nchar(x)))
+    aa_list <- lapply(aa,
+        function(x) substring(x, first=1:(nchar(x)), last=1:nchar(x))
+    )
+    dssp_list <- lapply(dssp, 
+        function(x) substring(x, first=1:(nchar(x)), last=1:nchar(x))
+    )
     
     frequencies <- table(paste(unlist(dssp_list), unlist(aa_list), sep=""))
 
@@ -181,7 +198,9 @@ eigen_stationary_distribution <- function(T) {
     e_vec <- e$vectors
     e_val <- e$values
     e_val_one_index <- which(abs(e_val-1) < 1e-12)
-    stat_dist <- matrix(e_vec[, e_val_one_index]/ sum(e_vec[, e_val_one_index]), nrow=1, ncol=length(DSSP))
+    stat_dist <- matrix(e_vec[, e_val_one_index]/
+        sum(e_vec[, e_val_one_index]), nrow=1, ncol=length(DSSP)
+    )
     colnames(stat_dist) <- DSSP
     print("Stationary distribution of transmission probabilities (eigenvalue approach): ")
     print(stat_dist)
@@ -222,7 +241,9 @@ save_to_tsv <- function(data, file_path) {
 
 get_accuracies <- function(pred_df, column_name) {
     accuracies <- apply(pred_df, 1, function(row) {
-        sum(strsplit(row["SecondaryStructure"], "")[[1]] == strsplit(row[column_name], "")[[1]]) / nchar(row["SecondaryStructure"])
+        sum(
+            strsplit(row["SecondaryStructure"], "")[[1]] == strsplit(row[column_name], "")[[1]])/
+            nchar(row["SecondaryStructure"])
     })
     print(summary(accuracies))
     return(accuracies)
@@ -254,7 +275,7 @@ compute_CI <- function(boot_params) {
         }, i, 1:dim(boot_params)[2])
     }, 1:dim(boot_params)[1])
 
-    # Collecting CIs
+    # Collecting CIs of parameters in the diagonal
     CI <- matrix(NA, nrow=dim(lower_CI)[1], ncol=2)
     if(dim(lower_CI)[2] == 1) {
         CI[, 1] <- lower_CI
@@ -270,94 +291,80 @@ compute_CI <- function(boot_params) {
     # Returning diagonal parameters' CIs
     # and separately lower and upper bounds for CIs 
     # of all parameters in the matrix
-
     return(list(diag_param_CI=CI, lower_CI=lower_CI, upper_CI=upper_CI))
 }
 
-collect_CI <- function(lower_CI, upper_CI) {
-    CI <- matrix(NA, nrow=dim(lower_CI)[1], ncol=2)
-    if(dim(lower_CI)[2] == 1) {
-        CI[, 1] <- lower_CI
-        CI[, 2] <- upper_CI
-    } else {
-        mapply(function(i) {
-                CI[i, 1] <<- lower_CI[i, i]
-                CI[i, 2] <<- upper_CI[i, i]
-            }, 1:dim(lower_CI)[1]
-        )
-    }
-    print(CI)
+```
+```{r}
+# Loading data
+prot_train_df <- loading_data(paste0(data_folder, "proteins_train.tsv"), sec_struct=TRUE)
+prot_test_df <- loading_data(paste0(data_folder, "proteins_test.tsv"), sec_struct=TRUE)
+prot_new_df <- loading_data(paste0(data_folder, "proteins_new.tsv"), sec_struct=FALSE)
+```
+```{r}
+# Initialisation of parameters
+params <- init_matrices(prot_train_df)
+```
+
+```{r}
+# Stationary distribution
+eigen_stationary_distribution(params$T)
+brute_force_stationary_distribution(params$T)
+```
+
+```{r}
+# Making predictions
+prot_test_df <- run_viterbi_predictions(prot_test_df, params)
+prot_new_df <- run_viterbi_predictions(prot_new_df, params)
+
+# Saving predictions
+save_to_tsv(prot_new_df, paste0(data_folder, "proteins_new_pred.tsv"))
+
+# Computing prediction accuracies
+print("Accuracy statistics of Viterbi predictions:")
+viterbi_acc <- get_accuracies(prot_test_df, column_name="PredictedStructure")
+
+# Making random "predictions"
+prot_test_df <- run_random_predictions(prot_test_df, params)
+print("Accuracy statistics of random 'predictions':")
+rand_acc <- get_accuracies(prot_test_df, column_name="RandomStructure")
+
+# Plot box plot from accuracies
+boxplot(rand_acc, viterbi_acc, ylim=c(0, 1), ylab="Accuracy", xlab="Algorithm",
+    names=c("Random", "Viterbi")
+)
+```
+```{r}
+# Bootstrapping for parameter CFs
+# TODO: change the number of bootstraps
+N_BOOT <- 1000
+boot_params <- list(I=list(), T=list(), E=list())
+
+for (i in 1:N_BOOT) {
+    boot_data <- get_bootstrapped_data(prot_train_df)
+    params <- init_matrices(boot_data)
+
+    boot_params$I <- list(boot_params$I, params$I)
+    boot_params$T <- list(boot_params$T, params$T)
+    boot_params$E <- list(boot_params$E, params$E)
 }
 
-#' Main function that accepts command-line arguments
-#' @param args a character vector of command-line arguments
-main <- function(args) {
-    # Parse command-line arguments
-    if (length(args) != 2) {
-        stop("Invalid number of arguments. Usage: Rscript viterbi.r <data_folder> <predictions_tsv>")
-    }
-    data_folder <- args[1]
-    
-    # Loading data
-    prot_train_df <- loading_data(paste0(data_folder, "proteins_train.tsv"), sec_struct=TRUE)
-    prot_test_df <- loading_data(paste0(data_folder, "proteins_test.tsv"), sec_struct=TRUE)
-    prot_new_df <- loading_data(paste0(data_folder, "proteins_new.tsv"), sec_struct=FALSE)
+boot_params$I <- process_bootstrap_params(boot_params$I, params$I, N_BOOT)
+boot_params$T <- process_bootstrap_params(boot_params$T, params$T, N_BOOT)
+boot_params$E <- process_bootstrap_params(boot_params$E, params$E, N_BOOT)
 
-    # Initialisation of parameters
-    params <- init_matrices(prot_train_df)
+# Computing confidence intervals for parameter matrices
+CI_I <- compute_CI(exp(boot_params$I))
+CI_T <- compute_CI(exp(boot_params$T))
+CI_E <- compute_CI(exp(boot_params$E))
+print(CI_I)
+print(CI_T)
+print(CI_E)
+```
 
-    # Stationary distribution
-    eigen_stationary_distribution(params$T)
-    brute_force_stationary_distribution(params$T)
+## Render this .rmd into a pdf
 
-    # Making predictions
-    prot_test_df <- run_viterbi_predictions(prot_test_df, params)
-    prot_new_df <- run_viterbi_predictions(prot_new_df, params)
-
-    # Saving predictions
-    save_to_tsv(prot_new_df, args[2])
-
-    # Computing prediction accuracies
-    print("Accuracy statistics of Viterbi predictions:")
-    viterbi_acc <- get_accuracies(prot_test_df, column_name="PredictedStructure")
-
-    # Making random "predictions"
-    prot_test_df <- run_random_predictions(prot_test_df, params)
-    print("Accuracy statistics of random 'predictions':")
-    rand_acc <- get_accuracies(prot_test_df, column_name="RandomStructure")
-
-    # Plot box plot from accuracies
-    boxplot(rand_acc, viterbi_acc, ylim=c(0, 1), ylab="Accuracy", xlab="Algorithm",
-        names=c("Random", "Viterbi")
-    )
-
-    # Bootstrapping for parameter CFs
-    # TODO: change the number of bootstraps
-    N_BOOT <- 10
-    boot_params <- list(I=list(), T=list(), E=list())
-
-    for (i in 1:N_BOOT) {
-        boot_data <- get_bootstrapped_data(prot_train_df)
-        params <- init_matrices(boot_data)
-
-        boot_params$I <- list(boot_params$I, params$I)
-        boot_params$T <- list(boot_params$T, params$T)
-        boot_params$E <- list(boot_params$E, params$E)
-    }
-    
-    boot_params$I <- process_bootstrap_params(boot_params$I, params$I, N_BOOT)
-    boot_params$T <- process_bootstrap_params(boot_params$T, params$T, N_BOOT)
-    boot_params$E <- process_bootstrap_params(boot_params$E, params$E, N_BOOT)
-
-    # Computing confidence intervals for parameter matrices
-    CI_I <- compute_CI(exp(boot_params$I))
-    CI_T <- compute_CI(exp(boot_params$T))
-    CI_E <- compute_CI(exp(boot_params$E))
-    print(CI_I)
-    print(CI_T)
-    print(CI_E)
-}
-
-args = commandArgs(trailingOnly=TRUE)
-main(args)
-
+```{r, eval=FALSE}
+library(rmarkdown)
+render("viterbi.Rmd", pdf_document(TRUE), "viterbi.pdf")
+```
