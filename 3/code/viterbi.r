@@ -244,6 +244,8 @@ compute_CI <- function(boot_params) {
     lower_CI <- matrix(NA, nrow=dim(boot_params)[1], ncol=dim(boot_params)[2])
     upper_CI <- matrix(NA, nrow=dim(boot_params)[1], ncol=dim(boot_params)[2])
 
+    # TODO: check the format of outputting the CIs
+
     mapply(function(i) {
         mapply(function(i, j) {
             values <- boot_params[i, j, ]
