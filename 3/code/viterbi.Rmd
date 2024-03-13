@@ -6,6 +6,72 @@ editor_options:
   chunk_output_type: console
 ---
 
+# Problem 6
+
+Consider the HMM represented by the above graph, where $X_n$ are observed variables and $Z_n$ are hidden variables. Each hidden variable can take on $K$ different values and the observed variables can take on $M$ different realisations. The HMM is now parameterized as in the lecture on slide 18.
+
+a) What is the maximum number of free parameters to define the HMM?
+
+Parameters of HMM:
+
+- Initial state probabilities: $I_k=P(Z_1 = k)$ -> vector of length k, probabilities sum up to 1 so k-1 free parameters
+
+- Transition probabilities: $T_{kl}=P(Z_n = l | Z_{n-1} = k)$ from state k to l. Generally, it would be a matrix of size $k \times k$ (from any state k to any other state), with $k \cdot (k-1)$ free parameters
+
+- Emission probabilities: $E_{kx} = P(X_n = x | Z_n = k)$. With k states and m random variables x, thus a matrix of size  $k \times m$ , with $k \cdot (m-1)$ free parameters
+
+The overall sum of parameters is: (k-1) + (k * (k-1)) + (k * (m-1))
+
+b) Assume K = 2 and the transition matrix is
+
+\begin{equation}
+T=
+\begin{pmatrix}
+0.3 & 0.7\\
+0.2 & 0.8
+\end{pmatrix}
+\end{equation}
+
+What is the stationary distribution $\pi$?
+
+The definition of stationary distribution satisfies the following:
+
+$$
+\pi = \pi  T
+$$
+
+Considering K is equal to 2, that means that the stationary distribution can be represented as following vector with k-1=1 parameters:
+
+\begin{equation}
+\pi=
+\begin{bmatrix}
+p & (1-p)
+\end{bmatrix}
+\end{equation}
+
+
+This leads to the following equations:
+
+$$
+0.3p + 0.2(1-p) = p
+$$
+$$
+0.7p + 0.8(1-p) = 1-p
+$$
+Both this equations lead to the solutions of $p=\frac{2}{9}$. Thus the stationary distribution is:
+
+
+\begin{equation}
+\pi=
+\begin{bmatrix}
+\frac{2}{9} &,     \frac{7}{9}
+\end{bmatrix}
+\end{equation}
+
+# Problem 7
+
+## Setting up the environment
+
 ```{r}
 suppressPackageStartupMessages(library(dplyr))
 set.seed(42)
@@ -18,6 +84,10 @@ AA <- c("A", "C", "D", "E", "F", "G", "H", "I", "K",
 )
 data_folder <- "../data/"
 ```
+
+### Functions
+
+Viterbi algorithm was provided.
 
 ```{r}
 #' @param E n times m matrix with the emission log probabilities of the n latent variables and m observed variables
@@ -107,7 +177,6 @@ init_matrices <- function(data) {
     T <- transition_states(data, T)
     E <- emission_states(data, E)
 
-    # TODO: understand, why we need to take log of matrices?
     I <- log(I)
     T <- log(T)
     E <- log(E)
@@ -202,6 +271,7 @@ eigen_stationary_distribution <- function(T) {
         sum(e_vec[, e_val_one_index]), nrow=1, ncol=length(DSSP)
     )
     colnames(stat_dist) <- DSSP
+    print(paste("Eigenvalue:", e_val[e_val_one_index]))
     print("Stationary distribution of transmission probabilities (eigenvalue approach): ")
     print(stat_dist)
     return(stat_dist)
@@ -249,70 +319,60 @@ get_accuracies <- function(pred_df, column_name) {
     return(accuracies)
 }
 
-get_bootstrapped_data <- function(data) {
-    bootstrapped_data <- slice_sample(data, n=nrow(data), replace=TRUE)
-    return(bootstrapped_data)
-}
-
-process_bootstrap_params <- function(boot_params, params, n_boot) {
-    boot_params <- array(unlist(boot_params), dim=c(dim(params), n_boot))
-    dimnames(boot_params) <- list(rownames(params), colnames(params), NULL)
-    return(boot_params)
-}
-
-compute_CI <- function(boot_params) {
-    n_values <- dim(boot_params)[1] * dim(boot_params)[2]
-    lower_CI <- matrix(NA, nrow=dim(boot_params)[1], ncol=dim(boot_params)[2])
-    upper_CI <- matrix(NA, nrow=dim(boot_params)[1], ncol=dim(boot_params)[2])
-
-    # TODO: check the format of outputting the CIs
-
-    mapply(function(i) {
-        mapply(function(i, j) {
-            values <- boot_params[i, j, ]
-            lower <- quantile(values, 0.025)
-            upper <- quantile(values, 0.975)
-            lower_CI[i, j] <<- lower
-            upper_CI[i, j] <<- upper
-        }, i, 1:dim(boot_params)[2])
-    }, 1:dim(boot_params)[1])
-
-    # Collecting CIs of parameters in the diagonal
-    CI <- matrix(NA, nrow=dim(lower_CI)[1], ncol=2)
-    if(dim(lower_CI)[2] == 1) {
-        CI[, 1] <- lower_CI
-        CI[, 2] <- upper_CI
-    } else {
-        mapply(function(i) {
-                CI[i, 1] <<- lower_CI[i, i]
-                CI[i, 2] <<- upper_CI[i, i]
-            }, 1:dim(lower_CI)[1]
-        )
-    }
-
-    # Returning diagonal parameters' CIs
-    # and separately lower and upper bounds for CIs 
-    # of all parameters in the matrix
-    return(list(diag_param_CI=CI, lower_CI=lower_CI, upper_CI=upper_CI))
-}
-
 ```
+
+## (a) Data loading 
+
+Read `proteins_train.tsv`, `proteins_test.tsv` and `proteins_new.tsv` into the memory and store each in a data.frame.
+
 ```{r}
 # Loading data
 prot_train_df <- loading_data(paste0(data_folder, "proteins_train.tsv"), sec_struct=TRUE)
 prot_test_df <- loading_data(paste0(data_folder, "proteins_test.tsv"), sec_struct=TRUE)
 prot_new_df <- loading_data(paste0(data_folder, "proteins_new.tsv"), sec_struct=FALSE)
 ```
+
+## (b) Estimating parameters
+
+Estimate the vector of initial state probabilities I, the matrix of transition probabilities T and the matrix for emission probabilities E by using maximum likelihood, i.e., by counting how often each transition and each emission happened and how often each secondary structure was found at the beginning of a protein, respectively.
+
+$$
+I_i = P(Z_1 = i) = \frac{\#latent \; sequences \; start \; with \;  i}{\# sequences}
+$$
+
+$$
+E_{ij} = P(X_n=j|Z_n = i) = \frac{\#latent \; state \; i \; emits \; observable \;j}{\# latent \; state \; i \; emits \; anything}
+$$
+
+$$
+T_{ij} = P(Z_n=j|Z_{n-1} = i) = \frac{\#latent \; state \; i \; transits \; to \; state \;j}{\# latent \; state \; i \; transits \; to \; any \; other \; state}
+$$
 ```{r}
 # Initialisation of parameters
 params <- init_matrices(prot_train_df)
 ```
 
+# (c) Stationary distribution
+
+## Eigenvalues 
+
+We need left eigenvector for the stationary distribution:
+
+$$
+\pi = \pi  T
+$$
+
 ```{r}
-# Stationary distribution
 eigen_stationary_distribution(params$T)
+```
+
+## Brute force 
+
+```{r}
 brute_force_stationary_distribution(params$T)
 ```
+
+# (d) Predictions
 
 ```{r}
 # Making predictions
@@ -330,38 +390,70 @@ viterbi_acc <- get_accuracies(prot_test_df, column_name="PredictedStructure")
 prot_test_df <- run_random_predictions(prot_test_df, params)
 print("Accuracy statistics of random 'predictions':")
 rand_acc <- get_accuracies(prot_test_df, column_name="RandomStructure")
+```
 
-# Plot box plot from accuracies
+# (e) Bootstrapping
+
+```{r}
+# Number of bootstrap runs
+n_bt <- 1000
+# Define storage dataframes
+I_bt <- matrix(0, length(DSSP), n_bt)
+E_bt <- array(0, dim=c(length(DSSP), length(AA), n_bt))
+T_bt <- array(0, dim=c(length(DSSP), length(DSSP), n_bt))
+
+# Bootstrapping
+for (i in 1:n_bt){
+  # Resample the dataframe
+  df_bt <- train_data[sample(nrow(train_data), replace=T),]
+  
+  # Estimate current run
+  I_est <- est_I(df_bt)
+  E_est <- est_E(df_bt)
+  T_est <- est_Tr(df_bt)
+  
+  # Concatenate
+  I_bt[, i] <- I_est
+  E_bt[, , i] <- E_est
+  T_bt[, , i] <- T_est
+  
+  if (sum(is.na(Tr_est)) > 0){
+    break
+  }
+}
+```
+
+```{r}
+I_ci <- apply(I_bt, 1, function(x) {
+  down <- quantile(x, 0.025)
+  up <- quantile(x, 0.975)
+  return(c(down, up))
+})
+
+E_ci <- apply(E_bt, c(1, 2), function(x) {
+  down <- quantile(x, 0.025)
+  up <- quantile(x, 0.975)
+  return(c(down, up))
+})
+
+T_ci <- apply(T_bt, c(1, 2), function(x) {
+  down <- quantile(x, 0.025)
+  up <- quantile(x, 0.975)
+  return(c(down, up))
+})
+
+I_ci
+head(E_ci)
+head(T_ci)
+```
+
+# (g) Comparison
+
+```{r}
+# Plot box plot of accuracies
 boxplot(rand_acc, viterbi_acc, ylim=c(0, 1), ylab="Accuracy", xlab="Algorithm",
     names=c("Random", "Viterbi")
 )
-```
-```{r}
-# Bootstrapping for parameter CFs
-# TODO: change the number of bootstraps
-N_BOOT <- 1000
-boot_params <- list(I=list(), T=list(), E=list())
-
-for (i in 1:N_BOOT) {
-    boot_data <- get_bootstrapped_data(prot_train_df)
-    params <- init_matrices(boot_data)
-
-    boot_params$I <- list(boot_params$I, params$I)
-    boot_params$T <- list(boot_params$T, params$T)
-    boot_params$E <- list(boot_params$E, params$E)
-}
-
-boot_params$I <- process_bootstrap_params(boot_params$I, params$I, N_BOOT)
-boot_params$T <- process_bootstrap_params(boot_params$T, params$T, N_BOOT)
-boot_params$E <- process_bootstrap_params(boot_params$E, params$E, N_BOOT)
-
-# Computing confidence intervals for parameter matrices
-CI_I <- compute_CI(exp(boot_params$I))
-CI_T <- compute_CI(exp(boot_params$T))
-CI_E <- compute_CI(exp(boot_params$E))
-print(CI_I)
-print(CI_T)
-print(CI_E)
 ```
 
 ## Render this .rmd into a pdf
