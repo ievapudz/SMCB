@@ -273,7 +273,6 @@ eigen_stationary_distribution <- function(T) {
     colnames(stat_dist) <- DSSP
     print(paste("Eigenvalue:", e_val[e_val_one_index]))
     print("Stationary distribution of transmission probabilities (eigenvalue approach): ")
-    print(stat_dist)
     return(stat_dist)
 }
 
@@ -404,22 +403,24 @@ T_bt <- array(0, dim=c(length(DSSP), length(DSSP), n_bt))
 
 # Bootstrapping
 for (i in 1:n_bt){
-  # Resample the dataframe
-  df_bt <- train_data[sample(nrow(train_data), replace=T),]
-  
-  # Estimate current run
-  I_est <- est_I(df_bt)
-  E_est <- est_E(df_bt)
-  T_est <- est_Tr(df_bt)
-  
-  # Concatenate
-  I_bt[, i] <- I_est
-  E_bt[, , i] <- E_est
-  T_bt[, , i] <- T_est
-  
-  if (sum(is.na(Tr_est)) > 0){
-    break
-  }
+    # Resample the dataframe
+    df_bt <- prot_train_df[sample(nrow(prot_train_df), replace=T),]
+    
+    est <- init_matrices(df_bt)
+
+    # Estimate current run
+    I_est <- exp(est$I)
+    E_est <- exp(est$E)
+    T_est <- exp(est$T)
+    
+    # Concatenate
+    I_bt[, i] <- I_est
+    E_bt[, , i] <- E_est
+    T_bt[, , i] <- T_est
+    
+    if (sum(is.na(T_est)) > 0){
+        break
+    }
 }
 ```
 
