@@ -83,20 +83,19 @@ coin_EM <- function(D, k, lambda, theta, tolerance = 1e-2) {
     for (i in 1:ncol(gamma)) {
       nheads <- sum(D[i,])
       ntails <- ncol(D) - sum(D[i,])
-      P_obs_i_given_CA <- lambda[1]*(theta[1]^nheads)*((1-theta[1])^ntails)
-      P_obs_i_given_CB <- lambda[2]*(theta[2]^nheads)*((1-theta[2])^ntails)
+      gamma_num_CA <- lambda[1]*(theta[1]^nheads)*((1-theta[1])^ntails)
+      gamma_num_CB <- lambda[2]*(theta[2]^nheads)*((1-theta[2])^ntails)
 
       # Saving likelihoods for the next step
-      c_P_obs_i_given_CA <- append(c_P_obs_i_given_CA, P_obs_i_given_CA)
-      c_P_obs_i_given_CB <- append(c_P_obs_i_given_CB, P_obs_i_given_CB)
+      c_P_obs_i_given_CA <- append(c_P_obs_i_given_CA, (theta[1]^nheads)*((1-theta[1])^ntails))
+      c_P_obs_i_given_CB <- append(c_P_obs_i_given_CB, (theta[2]^nheads)*((1-theta[2])^ntails))
 
-      P_obs <- P_obs_i_given_CA+P_obs_i_given_CB
+      P_obs <- gamma_num_CA+gamma_num_CB
       
       # Compute the responsibilities for each observation
-      gamma[, i] <- c(P_obs_i_given_CA/P_obs, P_obs_i_given_CB/P_obs)
+      gamma[, i] <- c(gamma_num_CA/P_obs, gamma_num_CB/P_obs)
     }
 
-    
     # Update expected complete-data (hidden) log-likelihood
     ll_hid_new <- 0
     for (i in 1:ncol(gamma)) {
@@ -108,7 +107,6 @@ coin_EM <- function(D, k, lambda, theta, tolerance = 1e-2) {
 
     # Update observed log-likelihood 
     l_q <- mean(log(c(gamma[1,], gamma[2,])))
-    #ll_obs_new <- log(sum(c_P_obs_i_given_CA))+log(sum(c_P_obs_i_given_CB))
     ll_obs_new <- ll_hid_new - l_q
     ll_obs <- c(ll_obs, ll_obs_new) # keep track of this quantity 
 
