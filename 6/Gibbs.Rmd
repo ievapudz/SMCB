@@ -120,10 +120,12 @@ result2
 # Plotting relative frequencies of R = T and C = T
 burn_in_phase <- 21000
 par(mfrow=c(1,2))
-plot(1:N, cumsum(samples1[, "R"])/seq_len(N), type="l", xlab="Iteration", ylab="Relative Frequency", main="R = T")
+plot(1:N, cumsum(samples1[, "R"])/seq_len(N), type="l", 
+    xlab="Iteration", ylab="Relative Frequency", main="R = T")
 lines(cumsum(samples2[, "R"])/seq_len(N), type='l', col='blue')
 abline(v=burn_in_phase, col="red")
-plot(1:N, cumsum(samples1[, "C"])/seq_len(N), type="l", xlab="Iteration", ylab="Relative Frequency", main="C = T")
+plot(1:N, cumsum(samples1[, "C"])/seq_len(N), type="l", 
+    xlab="Iteration", ylab="Relative Frequency", main="C = T")
 lines(cumsum(samples2[, "C"])/seq_len(N), type='l', col='blue')
 abline(v=burn_in_phase, col="red")
 ```
@@ -140,7 +142,7 @@ gelman.plot(mcmcs)
 gelman.diag(mcmcs)
 ```
 
-After around 10000 iterations, the fluctuations around the potential scale reduction factor are negligible, therefore a suggested burn-in time is 10000.
+After around 20000 iterations, the fluctuations around the potential scale reduction factor are negligible, therefore a suggested burn-in time is 20000.
 
 ## Re-estimation of marginal probability (h)
 
@@ -148,12 +150,14 @@ Computing marginal probability P(R=T|S=T,W=T) excluding the samples from the bur
 
 ```{r}
 burn_in_phase <- 10000
-result1 <- table(samples1[(burn_in_phase+1):N, "R"], samples1[(burn_in_phase+1):N, "C"])/(N-burn_in_phase)
+result1 <- table(samples1[(burn_in_phase+1):N, "R"], 
+    samples1[(burn_in_phase+1):N, "C"])/(N-burn_in_phase)
 rownames(result1) <- c("R0", "R1")
 colnames(result1) <- c("C0", "C1")
 result1
 
-result2 <- table(samples2[(burn_in_phase+1):N, "R"], samples2[(burn_in_phase+1):N, "C"])/(N-burn_in_phase)
+result2 <- table(samples2[(burn_in_phase+1):N, "R"], 
+    samples2[(burn_in_phase+1):N, "C"])/(N-burn_in_phase)
 rownames(result2) <- c("R0", "R1")
 colnames(result2) <- c("C0", "C1")
 result2
@@ -179,7 +183,8 @@ R1_S1_W1 <- p$W.S1_R1*p$S.C0*p$R.C0*(1-p$C) +
 
 analytical_marginal.R.S1_W1 <- R1_S1_W1 / S1_W1
 
-analytical_marginal.R.S1_W1
+print("Analytical solution for the marginal probability:")
+print(analytical_marginal.R.S1_W1)
 ```
 
 The marginal probabilities of the (h) part are closer to the analytical solution, meanwhile probability of (c) part deviates more. It is intuitive, since
