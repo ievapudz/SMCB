@@ -17,8 +17,8 @@ knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
 p <- list(C=0.5, S.C1=0.1, S.C0=0.5, R.C1=0.8, R.C0=0.2, W.S1_R1=0.99, W.S1_R0=0.9, W.S0_R1=0.9, W.S0_R0=0.01)
 p$C.R1_S1_W1 <- p$R.C1*p$S.C1*p$C/(p$R.C1*p$S.C1*p$C+p$R.C0*p$S.C0*(1-p$C))
 p$C.R0_S1_W1 <- (1-p$R.C1)*p$S.C1*p$C/((1-p$R.C1)*p$S.C1*p$C+(1-p$R.C0)*p$S.C0*(1-p$C))
-p$R.C1_S1_W1 <- p$W.S1_R1*p$R.C1/(p$W.S1_R1*p$R.C1 + p$W.S1_R0*(1-p$R.C1))
-p$R.C0_S1_W1 <- p$W.S1_R1*p$R.C0/(p$W.S1_R1*p$R.C0 + p$W.S1_R0*(1-p$R.C0))
+p$R.C1_S1_W1 <- p$W.S1_R1*p$R.C1/(p$W.S1_R1*p$R.C1+p$W.S1_R0*(1-p$R.C1))
+p$R.C0_S1_W1 <- p$W.S1_R1*p$R.C0/(p$W.S1_R1*p$R.C0+p$W.S1_R0*(1-p$R.C0))
 ```
 
 ```{r}
@@ -156,6 +156,22 @@ marginal1.R.S1_W1 <- sum(result1[2,])
 marginal2.R.S1_W1 <- sum(result2[2,])
 print(paste("Marginal probability using the first run of 50000 iterations and excluded burn-in phase:", marginal1.R.S1_W1))
 print(paste("Marginal probability using the second run of 50000 iterations and excluded burn-in phase:", marginal2.R.S1_W1))
+```
+
+## Analytical solution of marginal probability
+
+```{r}
+S1_W1 <- p$W.S1_R0*p$S.C0*(1-p$R.C0)*(1-p$C) +
+         p$W.S1_R0*p$S.C1*(1-p$R.C1)*p$C +
+         p$W.S1_R1*p$S.C0*p$R.C0*(1-p$C) +
+         p$W.S1_R1*p$S.C1*p$R.C1*p$C
+
+R1_S1_W1 <- p$W.S1_R1*p$S.C0*p$R.C0*(1-p$C) +
+            p$W.S1_R1*p$S.C1*p$R.C1*p$C
+
+analytical_marginal.R.S1_W1 <- R1_S1_W1 / S1_W1
+
+analytical_marginal.R.S1_W1
 ```
 
 ```{r, eval=FALSE}
