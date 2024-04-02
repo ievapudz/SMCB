@@ -47,6 +47,13 @@ for(n in 1:N) {
 
 ```
 
+```{r}
+result <- table(samples[-1, "R"], samples[-1, "C"])/N
+rownames(result) <- c("R0", "R1")
+colnames(result) <- c("C0", "C1")
+result
+```
+
 ```{r, eval=FALSE}
 library(rmarkdown)
 render("Gibbs.Rmd", pdf_document(TRUE), "Indilewitsch_Toidze_Houhamdi_Pudziuvelyte_Project6.pdf")
