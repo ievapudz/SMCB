@@ -13,38 +13,47 @@ knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
 ## Gibbs sampler
 
 ```{r}
-set.seed(42)
-
 # Encoding conditional probabilities
 p <- list(C=0.5, S.C1=0.1, S.C0=0.5, R.C1=0.8, R.C0=0.2, W.S1_R1=0.99, W.S1_R0=0.9, W.S0_R1=0.9, W.S0_R0=0.01)
 p$C.R1_S1_W1 <- p$R.C1*p$S.C1*p$C/(p$R.C1*p$S.C1*p$C+p$R.C0*p$S.C0*(1-p$C))
 p$C.R0_S1_W1 <- (1-p$R.C1)*p$S.C1*p$C/((1-p$R.C1)*p$S.C1*p$C+(1-p$R.C0)*p$S.C0*(1-p$C))
 p$R.C1_S1_W1 <- p$W.S1_R1*p$R.C1/(p$W.S1_R1*p$R.C1 + p$W.S1_R0*(1-p$R.C1))
 p$R.C0_S1_W1 <- p$W.S1_R1*p$R.C0/(p$W.S1_R1*p$R.C0 + p$W.S1_R0*(1-p$R.C0))
+```
 
-N <- 100
-samples <- matrix(NA, ncol=2, nrow=N+1, dimnames=list(NULL, c("R", "C")))
-# Initialisation (beginning state)
-samples[1,] <- c(TRUE, TRUE)
+```{r}
 
-for(n in 1:N) {
-    # Random sampling to choose which variable (R or C) is updated
-    indicator <- runif(1)
-    if(indicator < p$C) {
-        # Sampling from P(R_{n+1}|C_{n},S=T,W=T)
-        if(samples[n, "C"]) sampling_prob <- p$R.C1_S1_W1 else sampling_prob <- p$R.C0_S1_W1
+Gibbs_sampler <- function(N=100) {
+    samples <- matrix(NA, ncol=2, nrow=N+1, dimnames=list(NULL, c("R", "C")))
+    # Initialisation (beginning state)
+    samples[1,] <- c(TRUE, TRUE)
 
-        sampled_R <- sample(c(TRUE, FALSE), size=1, prob=c(sampling_prob, (1-sampling_prob)))
-        samples[(n+1),] <- c(sampled_R, samples[n, "C"])
-    } else {
-        # Sampling from P(C_{n+1}|R_{n},S=T,W=T)
-        if(samples[n, "R"]) sampling_prob <- p$C.R1_S1_W1 else sampling_prob <- p$C.R0_S1_W1
+    for(n in 1:N) {
+        # Random sampling to choose which variable (R or C) is updated
+        indicator <- runif(1)
+        if(indicator < p$C) {
+            # Sampling from P(R_{n+1}|C_{n},S=T,W=T)
+            if(samples[n, "C"]) sampling_prob <- p$R.C1_S1_W1 else sampling_prob <- p$R.C0_S1_W1
 
-        sampled_C <- sample(c(TRUE, FALSE), size=1, prob=c(sampling_prob, (1-sampling_prob)))
-        samples[(n+1),] <- c(sampled_C, samples[n, "R"])
+            sampled_R <- sample(c(TRUE, FALSE), size=1, prob=c(sampling_prob, (1-sampling_prob)))
+            samples[(n+1),] <- c(sampled_R, samples[n, "C"])
+        } else {
+            # Sampling from P(C_{n+1}|R_{n},S=T,W=T)
+            if(samples[n, "R"]) sampling_prob <- p$C.R1_S1_W1 else sampling_prob <- p$C.R0_S1_W1
+
+            sampled_C <- sample(c(TRUE, FALSE), size=1, prob=c(sampling_prob, (1-sampling_prob)))
+            samples[(n+1),] <- c(sampled_C, samples[n, "R"])
+        }
     }
+    return(samples)
 }
 
+```
+
+```{r}
+set.seed(42)
+N <- 100
+samples <- Gibbs_sampler(N)
 ```
 
 ```{r}
@@ -52,6 +61,67 @@ result <- table(samples[-1, "R"], samples[-1, "C"])/N
 rownames(result) <- c("R0", "R1")
 colnames(result) <- c("C0", "C1")
 result
+```
+
+## Marginal probability 
+
+Computing marginal probability P(R=T|S=T,W=T).
+
+```{r}
+marginal.R.S1_W1 <- sum(result[2,])
+marginal.R.S1_W1
+```
+
+## Auto-correlation and effective sample size (ESS)
+
+```{r}
+ro_R <- acf(as.numeric(samples[,"R"]), main="Rain")
+ro_C <- acf(as.numeric(samples[,"C"]), main="Cloudy")
+```
+
+```{r}
+ESS_R <- N/(1+2*sum(ro_R$acf))
+ESS_C <- N/(1+2*sum(ro_C$acf))
+print(paste("Effective sample size for chain 'rain':", ESS_R))
+print(paste("Effective sample size for chain 'cloudy':", ESS_C))
+```
+
+## Gibbs sampling of 50000 samples
+
+```{r}
+set.seed(42)
+N <- 50000
+samples1 <- Gibbs_sampler(N)
+
+result1 <- table(samples1[-1, "R"], samples1[-1, "C"])/N
+rownames(result1) <- c("R0", "R1")
+colnames(result1) <- c("C0", "C1")
+
+samples2 <- Gibbs_sampler(N)
+
+result2 <- table(samples2[-1, "R"], samples2[-1, "C"])/N
+rownames(result2) <- c("R0", "R1")
+colnames(result2) <- c("C0", "C1")
+```
+
+```{r}
+result1
+```
+
+```{r}
+result2
+```
+
+```{r}
+# Plotting relative frequencies of R = T and C = T
+burn_in_phase <- 21000
+par(mfrow=c(1,2))
+plot(1:N, cumsum(samples1[-1, "R"])/seq_len(N), type="l", xlab="Iteration", ylab="Relative Frequency", main="R = T")
+lines(cumsum(samples2[-1, "R"])/seq_len(N), type='l', col='blue')
+abline(v=burn_in_phase, col="red")
+plot(1:N, cumsum(samples1[-1, "C"])/seq_len(N), type="l", xlab="Iteration", ylab="Relative Frequency", main="C = T")
+lines(cumsum(samples2[-1, "C"])/seq_len(N), type='l', col='blue')
+abline(v=burn_in_phase, col="red")
 ```
 
 ```{r, eval=FALSE}
