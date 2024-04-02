@@ -14,7 +14,6 @@ knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
 
 ```{r}
 set.seed(42)
-# TODO: implement Gibbs sampler
 
 # Encoding conditional probabilities
 p <- list(C=0.5, S.C1=0.1, S.C0=0.5, R.C1=0.8, R.C0=0.2, W.S1_R1=0.99, W.S1_R0=0.9, W.S0_R1=0.9, W.S0_R0=0.01)
@@ -23,11 +22,9 @@ p$C.R0_S1_W1 <- (1-p$R.C1)*p$S.C1*p$C/((1-p$R.C1)*p$S.C1*p$C+(1-p$R.C0)*p$S.C0*(
 p$R.C1_S1_W1 <- p$W.S1_R1*p$R.C1/(p$W.S1_R1*p$R.C1 + p$W.S1_R0*(1-p$R.C1))
 p$R.C0_S1_W1 <- p$W.S1_R1*p$R.C0/(p$W.S1_R1*p$R.C0 + p$W.S1_R0*(1-p$R.C0))
 
-print(p)
-
 N <- 100
 samples <- matrix(NA, ncol=2, nrow=N+1, dimnames=list(NULL, c("R", "C")))
-# Initialisation
+# Initialisation (beginning state)
 samples[1,] <- c(TRUE, TRUE)
 
 for(n in 1:N) {
@@ -36,11 +33,15 @@ for(n in 1:N) {
     if(indicator < p$C) {
         # Sampling from P(R_{n+1}|C_{n},S=T,W=T)
         if(samples[n, "C"]) sampling_prob <- p$R.C1_S1_W1 else sampling_prob <- p$R.C0_S1_W1
-        # TODO: sampling of the R value
+
+        sampled_R <- sample(c(TRUE, FALSE), size=1, prob=c(sampling_prob, (1-sampling_prob)))
+        samples[(n+1),] <- c(sampled_R, samples[n, "C"])
     } else {
         # Sampling from P(C_{n+1}|R_{n},S=T,W=T)
         if(samples[n, "R"]) sampling_prob <- p$C.R1_S1_W1 else sampling_prob <- p$C.R0_S1_W1
-        # TODO: sampling of the C value
+
+        sampled_C <- sample(c(TRUE, FALSE), size=1, prob=c(sampling_prob, (1-sampling_prob)))
+        samples[(n+1),] <- c(sampled_C, samples[n, "R"])
     }
 }
 
