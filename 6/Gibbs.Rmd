@@ -1,7 +1,8 @@
 ---
 title: "Project 6"
 output:
-  pdf_document: default
+  pdf_document: 
+    extra_dependencies: ['amsmath']
 ---
 
 ```{r setup, include=FALSE}
@@ -77,15 +78,15 @@ marginal.R.S1_W1
 ## Auto-correlation and effective sample size (ESS) (d)
 
 ```{r}
-ro_R <- acf(as.numeric(samples[, "R"]), main="Rain")
-ro_C <- acf(as.numeric(samples[, "C"]), main="Cloudy")
+acf_output_R <- acf(as.numeric(samples[, "R"]), main="Rain")
+acf_output_C <- acf(as.numeric(samples[, "C"]), main="Cloudy")
 ```
 
 ```{r}
-ESS_R <- ro_R$n.used/(1+2*sum(ro_R$acf))
-ESS_C <- ro_C$n.used/(1+2*sum(ro_C$acf))
-print(paste("Effective sample size for chain 'rain':", ESS_R))
-print(paste("Effective sample size for chain 'cloudy':", ESS_C))
+ESS_R <- acf_output_R$n.used/(1+2*sum(acf_output_R$acf))
+ESS_C <- acf_output_C$n.used/(1+2*sum(acf_output_C$acf))
+print(paste("Effective sample size for 'rain':", ESS_R))
+print(paste("Effective sample size for 'cloudy':", ESS_C))
 ```
 
 ## Gibbs sampling of 50000 samples (e)
@@ -121,14 +122,17 @@ result2
 burn_in_phase <- 21000
 par(mfrow=c(1,2))
 plot(1:N, cumsum(samples1[, "R"])/seq_len(N), type="l", 
-    xlab="Iteration", ylab="Relative Frequency", main="R = T")
+    xlab="iteration", ylab="relative frequency", main="R = T")
 lines(cumsum(samples2[, "R"])/seq_len(N), type='l', col='blue')
 abline(v=burn_in_phase, col="red")
 plot(1:N, cumsum(samples1[, "C"])/seq_len(N), type="l", 
-    xlab="Iteration", ylab="Relative Frequency", main="C = T")
+    xlab="iteration", ylab="relative frequency", main="C = T")
 lines(cumsum(samples2[, "C"])/seq_len(N), type='l', col='blue')
 abline(v=burn_in_phase, col="red")
 ```
+
+Based on this plot, burn-in time could be suggested to be 21000. After this time point curves of relative 
+frequency for both runs and both variables seem to be converged.
 
 ## Potential scale reduction factor (g)
 
@@ -142,14 +146,17 @@ gelman.plot(mcmcs)
 gelman.diag(mcmcs)
 ```
 
-After around 20000 iterations, the fluctuations around the potential scale reduction factor are negligible, therefore a suggested burn-in time is 20000.
+After around 20000 iterations, the fluctuations around the potential scale reduction factor are negligible
+for both variables, therefore a suggested burn-in time is 20000 iterations.
 
 ## Re-estimation of marginal probability (h)
 
-Computing marginal probability P(R=T|S=T,W=T) excluding the samples from the burn-in phase.
+Computing marginal probability P(R=T|S=T,W=T) excluding the samples from the burn-in phase. The length
+of the burn-in phase was chosen to be the average between the burn-in phase estimate from relative frequency 
+plot and plot of potential scale reduction factor.
 
 ```{r}
-burn_in_phase <- 10000
+burn_in_phase <- 20500
 result1 <- table(samples1[(burn_in_phase+1):N, "R"], 
     samples1[(burn_in_phase+1):N, "C"])/(N-burn_in_phase)
 rownames(result1) <- c("R0", "R1")
@@ -187,7 +194,8 @@ print("Analytical solution for the marginal probability:")
 print(analytical_marginal.R.S1_W1)
 ```
 
-The marginal probabilities of the (h) part are closer to the analytical solution, meanwhile probability of (c) part deviates more. It is intuitive, since
+The marginal probabilities of the (h) part are closer to the analytical solution, 
+meanwhile the probability of (c) part differs more. It is intuitive, since
 the sample size in (c) was small (100).
 
 ```{r, eval=FALSE}
