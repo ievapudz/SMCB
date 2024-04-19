@@ -1,0 +1,26 @@
+---
+title: "Project 8"
+output:
+  pdf_document: 
+    extra_dependencies: ['amsmath']
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
+```
+
+# Problem 20
+
+## Construction of transitive closure
+
+```{r}
+phi <- diag(5)
+rownames(phi) <- paste0("S", 1:5)
+colnames(phi) <- paste0("S", 1:5)
+phi
+```
+
+```{r, eval=FALSE}
+library(rmarkdown)
+render("NEM.Rmd", pdf_document(TRUE), "Indilewitsch_Toidze_Houhamdi_Pudziuvelyte_Project8.pdf")
+```
