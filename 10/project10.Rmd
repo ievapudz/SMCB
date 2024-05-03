@@ -1,0 +1,45 @@
+---
+title: "Project 10"
+output:
+  pdf_document: 
+    extra_dependencies: ['amsmath']
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
+```
+
+# Problem 29
+
+```{r}
+library(caret)
+library(glmnet)
+library(pROC)
+```
+
+```{r}
+load(file='yeastStorey.rda')
+```
+
+```{r}
+print(nrow(data))
+print(ncol(data))
+```
+
+```{r}
+head(data)
+```
+
+```{r}
+set.seed(42)
+data <- data[sample(1:nrow(data)), ]
+```
+
+```{r}
+head(data)
+```
+
+```{r, eval=FALSE}
+library(rmarkdown)
+render("Gibbs.Rmd", pdf_document(TRUE), "Indilewitsch_Toidze_Houhamdi_Pudziuvelyte_Project6.pdf")
+```
