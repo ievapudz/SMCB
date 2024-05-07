@@ -49,6 +49,29 @@ trainData
 testData
 ```
 
+## Cross-validation of elastic-net model
+
+```{r}
+x <- trainData[, !(names(trainData) %in% c("Marker"))]
+x <- as.matrix(x)
+y <- trainData$Marker
+```
+
+```{r}
+foldid <- sample(1:10, size=length(y), replace=TRUE)
+alphas <- seq(0, 1, by=0.1)
+
+elasticNetCVAlpha <- function(alpha) {
+  cv.glmnet(x, y, family="binomial", alpha=alpha, nfolds=10, foldid=foldid)
+}
+
+resultsCV <- lapply(alphas, elasticNetCVAlpha)
+```
+
+```{r}
+for(i in 1:11) { print(min(resultsCV[[i]]$cvm)) }
+```
+
 ```{r, eval=FALSE}
 library(rmarkdown)
 render("Gibbs.Rmd", pdf_document(TRUE), "Indilewitsch_Toidze_Houhamdi_Pudziuvelyte_Project6.pdf")
