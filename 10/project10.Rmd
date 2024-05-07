@@ -17,6 +17,8 @@ library(glmnet)
 library(pROC)
 ```
 
+## Loading data
+
 ```{r}
 load(file='yeastStorey.rda')
 ```
@@ -30,13 +32,21 @@ print(ncol(data))
 head(data)
 ```
 
+## Shuffling data (splitting into training and validation)
+
 ```{r}
 set.seed(42)
-data <- data[sample(1:nrow(data)), ]
+trainIndex <- createDataPartition(data$Marker, p=0.7, list=FALSE, times=1)
+trainData <- data[trainIndex,]
+testData <- data[-trainIndex,]
 ```
 
 ```{r}
-head(data)
+trainData
+```
+
+```{r}
+testData
 ```
 
 ```{r, eval=FALSE}
