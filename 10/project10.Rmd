@@ -69,7 +69,23 @@ resultsCV <- lapply(alphas, elasticNetCVAlpha)
 ```
 
 ```{r}
-for(i in 1:11) { print(min(resultsCV[[i]]$cvm)) }
+for(i in 1:11) { print(paste0("alpha=", alphas[i], "; error=", mean(resultsCV[[i]]$cvm))) }
+```
+$\alpha$ with which mean of mean cross-validated error is the smallest: $\alpha=1$.
+This alpha will be considered as optimal.
+
+### Plotting mean cross-validated error
+
+Cross-validated error function is binomial deviance.
+
+```{r}
+plot(resultsCV[[11]], ylab="cross-validated error")
+```
+
+### Plotting trace curve of coefficients
+
+```{r}
+plot(resultsCV[[11]]$glmnet.fit, "lambda")
 ```
 
 ```{r, eval=FALSE}
