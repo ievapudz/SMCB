@@ -32,7 +32,7 @@ print(ncol(data))
 head(data)
 ```
 
-## Shuffling data (splitting into training and validation)
+## Shuffling data (splitting into training and testing)
 
 ```{r}
 set.seed(42)
@@ -69,26 +69,49 @@ resultsCV <- lapply(alphas, elasticNetCVAlpha)
 ```
 
 ```{r}
-for(i in 1:11) { print(paste0("alpha=", alphas[i], "; error=", mean(resultsCV[[i]]$cvm))) }
+minMeanCVMIdx <- 1
+minMeanCVM <- mean(resultsCV[[1]]$cvm)
+for(i in 1:11) { 
+  if(minMeanCVM > mean(resultsCV[[i]]$cvm)) { minMeanCVM <- mean(resultsCV[[i]]$cvm); minMeanCVMIdx <- i}
+  print(paste0("alpha=", alphas[i], "; error=", mean(resultsCV[[i]]$cvm))) 
+}
 ```
-$\alpha$ with which mean of mean cross-validated error is the smallest: $\alpha=1$.
+### Finding optimal alpha
+
+$\alpha$ with which mean of mean cross-validated error is the smallest: $\alpha=$.
 This alpha will be considered as optimal.
+
+```{r}
+print(paste("Min. mean of mean cross-validated error:", minMeanCVM))
+optimalAlphaIdx <- minMeanCVMIdx
+```
 
 ### Plotting mean cross-validated error
 
 Cross-validated error function is binomial deviance.
 
 ```{r}
-plot(resultsCV[[11]], ylab="cross-validated error")
+plot(resultsCV[[optimalAlphaIdx]], ylab="cross-validated error")
 ```
 
 ### Plotting trace curve of coefficients
 
 ```{r}
-plot(resultsCV[[11]]$glmnet.fit, "lambda")
+plot(resultsCV[[optimalAlphaIdx]]$glmnet.fit, "lambda")
 ```
+
+### Picking optimal lambda
+
+```{r}
+optimalLambdaIdx <- which.min(resultsCV[[optimalAlphaIdx]]$cvm)
+print(paste("Optimal lambda:", resultsCV[[optimalAlphaIdx]]$lambda[[optimalLambdaIdx]]))
+```
+
+## Fitting model
+
+## Testing model
 
 ```{r, eval=FALSE}
 library(rmarkdown)
-render("Gibbs.Rmd", pdf_document(TRUE), "Indilewitsch_Toidze_Houhamdi_Pudziuvelyte_Project6.pdf")
+render("project10.Rmd", pdf_document(TRUE), "Indilewitsch_Toidze_Houhamdi_Pudziuvelyte_Project10.pdf")
 ```
