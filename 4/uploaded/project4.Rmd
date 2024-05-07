@@ -1,0 +1,126 @@
+---
+title: "Project 4"
+output:
+  pdf_document: 
+    latex_engine: xelatex
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Problem 11
+
+You are given multiple alignments of protein sequences for two protein families: GTP binding proteins, and a family of ATPases. The task is to determine to which family certain unclassified proteins belong. 
+
+1. Run source("profileHMM.R") to import functions which you will use below
+```{r}
+library(ggplot2)
+source("profileHMM.R")
+```
+
+2. Read the two alignments ‘GTP binding proteins.txt’ and ‘ATPases.txt’ into memory using the function parseAlignment().
+
+```{r}
+GTP_alignment <- parseAlignment("C:/Users/marie/Desktop/CBB/SMCB/Project_4_student/data/GTP_binding_proteins.txt")
+ATP_alignment <- parseAlignment("C:/Users/marie/Desktop/CBB/SMCB/Project_4_student/data/ATPases.txt")
+
+```
+
+3. Use the function learnHMM() to parametrise two profile HMMs: one for each protein family (multiple alignment).
+
+```{r}
+GTP_HMM <- learnHMM(GTP_alignment)
+ATP_HMM <- learnHMM(ATP_alignment)
+```
+
+4.Identify the position(s) with the highest match and with the highest insert emission frequencies over all symbols. Plot the respective match and insert emission frequencies for the identified positions.
+
+```{r}
+max_emission_GTP <- apply(GTP_HMM$mE, 2, max)
+max_pos_emi_GTP <- which.max(max_emission_GTP)
+
+max_emission_ATP <- apply(ATP_HMM$mE, 2, max)
+max_pos_emi_ATP <- which.max(max_emission_ATP)
+
+max_insertion_GTP <- apply(GTP_HMM$iE, 2, max)
+max_pos_ins_GTP <- which.max(max_insertion_GTP)
+
+max_insertion_ATP <- apply(ATP_HMM$iE, 2, max)
+max_pos_ins_ATP <- which.max(max_insertion_ATP)
+
+df_emi_GTP <-data.frame(freq = GTP_HMM$mE[,max_pos_emi_GTP], rownames = rownames(GTP_HMM$mE))
+df_emi_ATP <-data.frame(freq = ATP_HMM$mE[,max_pos_emi_ATP], rownames = rownames(ATP_HMM$mE))
+df_ins_GTP <-data.frame(freq = GTP_HMM$iE[,max_pos_ins_GTP], rownames = rownames(GTP_HMM$mE))
+df_ins_ATP <-data.frame(freq = ATP_HMM$iE[,max_pos_ins_ATP], rownames = rownames(ATP_HMM$mE))
+
+
+ggplot(df_emi_GTP, aes(x = rownames, y = freq))+
+  geom_bar(stat = "identity")+
+  labs(x="amino acids", y = "frequency", title = paste("Match emission frequency GTP for \nposition",max_pos_emi_GTP - 1))+
+  theme(plot.title = element_text(hjust = 0.5))
+
+ggplot(df_emi_ATP, aes(x = rownames, y = freq))+
+  geom_bar(stat = "identity")+
+  labs(x="amino acids", y = "frequency", title = paste("Match emission frequency ATP for \nposition",max_pos_emi_ATP - 1))+
+  theme(plot.title = element_text(hjust = 0.5))
+
+ggplot(df_ins_GTP, aes(x = rownames, y = freq))+
+  geom_bar(stat = "identity")+
+  labs(x="amino acids", y = "frequency", title = paste("Insert emission frequency GTP for \nposition",max_pos_ins_GTP - 1))+
+  theme(plot.title = element_text(hjust = 0.5))
+
+ggplot(df_ins_ATP, aes(x = rownames, y = freq))+
+  geom_bar(stat = "identity")+
+  labs(x="amino acids", y = "frequency", title = paste("Insert emission frequency ATP for \nposition",max_pos_ins_ATP - 1))+
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+5. The file Unclassified proteins.txt contains 31 protein sequences from unknown families. Load the protein sequences into a list using the parseProteins() function.
+
+```{r}
+unclass_proteins <- parseProteins("C:/Users/marie/Desktop/CBB/SMCB/Project_4_student/data/Unclassified_proteins.txt")
+```
+
+6. The function forward() takes as input a profile HMM M and a sequence x. It returns the log odds ratio of the probability of observing the sequence x given the model M versus the probability of observing the sequence x given the random model R. For each unclassified protein x(i) in the list, apply the forward algorithm for both models M1 and M2 to obtain the log odds ratio. Plot the values q(x_i) and include this in your report. Which proteins in the list belong to which family? Can you clearly decide for each protein?
+
+```{r}
+#apply forward to GTP and ATP 
+
+GTP_forward <- sapply(unclass_proteins, forward, HMM = GTP_HMM)
+ATP_forward <- sapply(unclass_proteins, forward, HMM = ATP_HMM)
+
+#get the log odds ratio by taking the difference (calculate q values)
+log_odds <- ATP_forward - GTP_forward 
+names(log_odds) <- 1:length(unclass_proteins)
+
+#plot q values 
+df_log_odds <-data.frame(log_odds = log_odds, num_proteins = 1:length(log_odds))
+ggplot(df_log_odds, aes(x = num_proteins, y = log_odds))+
+  geom_bar(stat = "identity")+
+  labs(x="proteins", y = "forward ATP vs. GTP", title = ("Forward log-odds for ATP/GTP unclass_proteins "))+
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+One can clearly decide for each protein to which family it belongs to based on the log odds ratio ATP/GTP sign. If its positive then the proteins belongs to the ATPase protein family, if its negative to the GTP binding protein family. This can be visualized: 
+
+```{r}
+df_log_odds$color <- ifelse(df_log_odds$log_odds > 0, "ATPase", "GTP binding")
+ggplot(df_log_odds, aes(x = num_proteins, y = log_odds, fill = color)) +
+  geom_bar(stat = "identity") +
+  labs(x = "proteins", y = "forward ATP vs. GTP", 
+       title = "forward log-odds for ATP/GTP unclass_proteins colored by protein family ") +
+  theme(plot.title = element_text(hjust = 0.5, size = 10)) +
+    scale_fill_manual(values = c("ATPase" = "green", "GTP binding" = "red"),
+                    name = "Protein family",
+                    labels = c("ATPase", "GTP binding"))
+
+```
+So proteins number 1,5,9,10,12,13,14,15,16,17,22,23,25,27,28,29 belong to the ATPase family and proteins 2,3,4,6,7,8,11,18,19,20,21,24,26,30,31 to the GTP binding family. 
+
+
+
+
+

@@ -112,5 +112,5 @@ print(res2$limits[[1]]$res[[1]]$score)
 
 ```{r, eval=FALSE}
 library(rmarkdown)
-render("NEM.Rmd", pdf_document(TRUE), "Indilewitsch_Toidze_Houhamdi_Pudziuvelyte_Project8.pdf")
+render("NEM.Rmd", pdf_document(TRUE), "NEM.pdf")
 ```

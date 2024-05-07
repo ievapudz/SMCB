@@ -1,0 +1,123 @@
+---
+title: "Project_5"
+output:
+  pdf_document: default
+  html_document: default
+  
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+## Problem 14
+
+1. Install and load the R packages phangorn and ape. Load the alignment ParisRT.txt into memory using the function read.dna().
+```{r}
+#Load packages
+library(ggplot2)
+library(phangorn)
+library(ape)
+
+#Load the data
+paris_rt <- read.dna("ParisRT.txt")
+
+```
+
+
+
+2. Create an initial tree topology for the alignment, using neighbour joining with the function
+NJ(). Base this on pairwise distances between sequences under the a. Kimura (1980), b.(Tamura and Nei 1993) and c. (Jukes and Cantor 1969) nucleotide substitution models, computed using the function dist.dna(). Plot the initial trees.
+
+```{r}
+#Calculate the pairwise distances under each substitution model:
+  #Kimura (1980)
+dist_kimura <- dist.dna(paris_rt, model = "K80")
+  #Tamura-Nei (1993)
+dist_tamura_nei <- dist.dna(paris_rt, model = "TN93")
+  #Jukes-Cantor (1969)
+dist_jukes_cantor <- dist.dna(paris_rt, model = "JC69")
+
+
+#Create initial trees using the neighbor-joining method
+tree_K80 <- NJ(dist_kimura)
+tree_TN93 <- NJ(dist_tamura_nei)
+tree_JC69 <- NJ(dist_jukes_cantor)
+
+
+#Plot the trees 
+  #Kimura (1980)
+plot(tree_K80, main = "Initial Kimoura (80) Tree Topology")
+  #Tamura-Nei (1993)
+plot(tree_TN93, main = "Initial Tamura-Nei (93) Tree Topology")
+  #Jukes-Cantor (1969)
+plot(tree_JC69, main = "Initial Jukes-Cantor (69) Tree Topology")
+
+
+```
+
+3. Use the function pml() to fit the Kimura model (model = "K80") to the above tree (a) and the alignment. Note that the function expects data = phyDat(alignment). What is the log likelihood of the fitted model?
+
+```{r}
+#Transform alignment into the appropriate format for pml
+align_phydat <- phyDat(paris_rt)
+
+#Fit the parameters of K80
+paris_rt_k80_param <- pml(tree = tree_K80, data = align_phydat, model = "K80")
+print(paste("The log-likelihood is", paris_rt_k80_param$logLik))
+```
+
+
+
+4.The function optim.pml() can be used to optimise parameters of a phylogenetic model. Find the optimal parameters of the Kimura (1980) nucleotide substitution model whilst the other parameters are held fixed. What are the values in the optimised rate matrix?
+
+```{r}
+#Optimize the Kimura parameters with others held fixed
+paris_rt_k80_param_opt <- optim.pml(paris_rt_k80_param, model = "K80", optQ = TRUE, optEdge = FALSE)
+
+#summary(paris_rt_k80_param_opt)
+
+#Print values of optimized rate matrix
+rate_matrix <- paris_rt_k80_param_opt$Q
+print(paste("The values in the optimised rate matrix of the Kimura model are alpha (transitions rate)=", rate_matrix[2], "And beta (transversions rate) =", rate_matrix[1]))
+
+```
+
+5. Optimise the Kimura model with respect to branch lengths, nucleotide substitution rates, and tree topology simultaneously. What is the log likelihood of the optimised model?
+
+```{r include=FALSE}
+#Optimize with respect to all parameters
+paris_rt_k80_param_opt_all <- optim.pml(paris_rt_k80_param, model = "K80", optQ = TRUE, optEdge = TRUE, optNni = TRUE)
+
+```
+
+```{r}
+print(paste("The new log-likelihood is", paris_rt_k80_param_opt$logLik))
+```
+
+
+6. The function bootstrap.pml() fits phylogenetic models to bootstrap resamples of the data. Run it on the optimised model from step 5, but pass the argument optNni = TRUE to allow for a different topology for each bootstrap run. What, exactly, is being resampled?
+
+```{r include=TRUE, eval=FALSE}
+# Running 1000 bootstrap samples
+bootstrap_results <- bootstrap.pml(paris_rt_k80_param_opt_all, bs = 1000, model = "K80", optNni = TRUE)
+
+```
+
+The data being resampled with replacement here are the columns (positions of the alignments of the sequence data). Each pseudo-replicate is the same size as the original dataset but may include some columns multiple times and omit others. 
+
+
+7.Use plotBS() with type = "phylogram" to plot the optimised tree (from step 5) with the bootstrap support on the edges. Which nurse (“Mme S” or “Mr D”) is more likely to have infected the patient “Mme L”?
+
+```{r}
+plotBS(tree = paris_rt_k80_param_opt_all$tree, BStrees = bootstrap_results, type = "phylogram",
+       cex = 0.6, cex.tip = 0.6, lwd = 2, edge.color = "blue", use.edge.length = TRUE, 
+       main = "Phylogenetic Tree K80 model with Bootstrap Values")
+```
+
+From the tree above, we observe that Mme S and Mme L group more closely together, with high bootstrap support (99.8). We can thus conclude that the nurse Mme S is more likely to have infected the patient Mme L.
+
+```{r, eval=FALSE}
+library(rmarkdown)
+render("project5.Rmd", pdf_document(TRUE), "Project5_Indilewitsch_Toidze_Houhamdi_Pudziuvelyte.pdf")
+```

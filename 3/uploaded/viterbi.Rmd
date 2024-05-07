@@ -1,0 +1,465 @@
+---
+title: "Project 3. Viterbi algorithm"
+date: March 10, 2024
+output: pdf_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Problem 6
+
+Consider the HMM represented by the above graph, where $X_n$ are observed variables and $Z_n$ are hidden variables. Each hidden variable can take on $K$ different values and the observed variables can take on $M$ different realisations. The HMM is now parameterized as in the lecture on slide 18.
+
+a) What is the maximum number of free parameters to define the HMM?
+
+Parameters of HMM:
+
+- Initial state probabilities: $I_k=P(Z_1 = k)$ -> vector of length k, probabilities sum up to 1 so k-1 free parameters
+
+- Transition probabilities: $T_{kl}=P(Z_n = l | Z_{n-1} = k)$ from state k to l. Generally, it would be a matrix of size $k \times k$ (from any state k to any other state), with $k \cdot (k-1)$ free parameters
+
+- Emission probabilities: $E_{kx} = P(X_n = x | Z_n = k)$. With k states and m random variables x, thus a matrix of size  $k \times m$ , with $k \cdot (m-1)$ free parameters
+
+The overall sum of parameters is: (k-1) + (k * (k-1)) + (k * (m-1))
+
+b) Assume K = 2 and the transition matrix is
+
+\begin{equation}
+T=
+\begin{pmatrix}
+0.3 & 0.7\\
+0.2 & 0.8
+\end{pmatrix}
+\end{equation}
+
+What is the stationary distribution $\pi$?
+
+The definition of stationary distribution satisfies the following:
+
+$$
+\pi = \pi  T
+$$
+
+Considering K is equal to 2, that means that the stationary distribution can be represented as following vector with k-1=1 parameters:
+
+\begin{equation}
+\pi=
+\begin{bmatrix}
+p & (1-p)
+\end{bmatrix}
+\end{equation}
+
+
+This leads to the following equations:
+
+$$
+0.3p + 0.2(1-p) = p
+$$
+$$
+0.7p + 0.8(1-p) = 1-p
+$$
+Both this equations lead to the solutions of $p=\frac{2}{9}$. Thus the stationary distribution is:
+
+
+\begin{equation}
+\pi=
+\begin{bmatrix}
+\frac{2}{9} &,     \frac{7}{9}
+\end{bmatrix}
+\end{equation}
+
+# Problem 7
+
+## Setting up the environment
+
+```{r}
+suppressPackageStartupMessages(library(dplyr))
+set.seed(42)
+```
+```{r}
+DSSP <- c("B", "C", "E", "G", "H", "I", "S", "T")
+AA <- c("A", "C", "D", "E", "F", "G", "H", "I", "K", 
+    "L", "M", "N", "P", "Q", "R", "S", "T", "U", 
+    "V", "W", "X", "Y"
+)
+data_folder <- "../data/"
+```
+
+### Functions
+
+Viterbi algorithm was provided.
+
+```{r}
+#' @param E n times m matrix with the emission log probabilities of the n latent variables and m observed variables
+#' @param Tr n times n matrix with the transition log probabilities
+#' @param I numeric vector of length n with the initial log probabilities of the n latent variables
+#' @param p a data.frame with a Variable named AminoAcids which holds the amino acid sequence as a character string
+viterbi <- function(E, Tr, I, p) {
+    .as.array <- function(.) stringr::str_split(., "")[[1]]
+    unique.ss <- c("B", "C", "E", "G", "H", "I", "S", "T")
+    unique.aa <- c("A", "C", "D", "E", "F", "G", "H", "I",
+                   "K", "L", "M", "N", "P", "Q", "R", "S",
+                   "T", "U", "V", "W", "X", "Y")
+    for (k in seq(nrow(p))) {
+        sequence <- p$AminoAcids[k]
+        aa.vec <- .as.array(sequence) %>% match(unique.aa)
+        P      <- matrix(0, nrow(E), length(aa.vec))
+        Ptr    <- matrix(0, nrow(E), length(aa.vec))
+        
+        ## sets the paths
+        for (i in seq(length(aa.vec))) {
+            if (i == 1) {
+                P[, i] <- I + E[, aa.vec[i]]
+            } else {
+                for (j in seq(nrow(E))) {
+                    p.loc    <- P[, i - 1] + Tr[, j] + E[j, aa.vec[i]]
+                    P[j, i] <- max(p.loc)
+                    Ptr[j, i] <- which.max(p.loc)
+                }
+            }
+        }
+        
+        ## backtrace: computes the most likely path
+        Phi <- vector(mode="integer",   length=length(aa.vec))
+        Phi[length(Phi)] <- which.max(P[, ncol(P)])
+        ## we start at the back, just as with Needleman-Wunsch or Smith-Waterman
+        for (i in seq(from=length(aa.vec), to=2)) {
+            Phi[i - 1] <- Ptr[Phi[i], i]
+        }
+        
+        states <- unique.ss[Phi]
+        p$PredictedStructure[k] <- paste(states, collapse="")
+    }
+    return(p)
+}
+
+loading_data <- function(data_file, sec_struct) {
+    col_names <- c('SeqID', 'AminoAcids')
+    if(sec_struct) { col_names <- append(col_names, 'SecondaryStructure')}
+    data_df <- read.csv(data_file, header=FALSE, sep="\t")
+    names(data_df) <- col_names
+    return(data_df)
+}
+
+assign_row_names <- function(M) {
+    row.names(M) <- DSSP
+    return(M)
+}
+
+assign_col_names <- function(M, aa=TRUE) {
+    if (aa) {
+        colnames(M) <- AA
+    } else {
+        colnames(M) <- DSSP
+    }
+    
+    return(M)
+}
+
+init_matrices <- function(data) {
+    # Initialisation of I, T, and E matrices using maximum likelihood
+
+    # I - 8 x 1 matrix - initial state probabilities
+    I <- matrix(0, nrow=length(DSSP), ncol=1)
+    # T - 8 x 8 matrix - transition probabilities
+    T <- matrix(0, nrow=length(DSSP), ncol=length(DSSP))
+    # E - 8 x 22 matrix - emission probabilities
+    E <- matrix(0, nrow=length(DSSP), ncol=length(AA))
+
+    I <- assign_row_names(I)
+    T <- assign_row_names(T)
+    E <- assign_row_names(E)
+
+    T <- assign_col_names(T, aa=FALSE)
+    E <- assign_col_names(E)
+
+    I <- initial_states(data, I)
+    T <- transition_states(data, T)
+    E <- emission_states(data, E)
+
+    I <- log(I)
+    T <- log(T)
+    E <- log(E)
+
+    return(list(I=I, T=T, E=E))
+}
+
+initial_states <- function(data, M) {
+    # Retrieving DSSP profiles
+    sec_struct <- data$SecondaryStructure
+    
+    # Computing frequencies of each letter in the first position
+    frequency <- table(substr(sec_struct, 1, 1))
+
+    # Computing relative frequencies
+    M[row.names(M) %in% names(frequency), 1] <- as.numeric(frequency)/sum(frequency)
+
+    # Return initial states matrix
+    return(M)
+}
+
+transition_states <- function(data, M) {
+    # Retrieving DSSP profiles
+    sec_struct <- data$SecondaryStructure
+    
+    pairs <- lapply(sec_struct, 
+        function(x) substring(x, first=1:(nchar(x)-1), last=2:nchar(x))
+    )
+    frequencies <- table(unlist(pairs))
+
+    # Assigning frequencies
+    for (i in seq(nrow(M))) {
+        for (j in seq(ncol(M))) {
+            row_name <- row.names(M)[i]
+            col_name <- colnames(M)[j]
+            freq_name <- paste0(row_name, col_name)
+            if (is.na(frequencies[freq_name])) {
+                M[i, j] <- 1
+            } else {
+                M[i, j] <- as.numeric(frequencies[freq_name])+1
+            }
+        }
+    }
+    # Relative frequencies
+    M <- M/rowSums(M)
+
+    # Return transition states matrix
+    return(M)
+}
+
+emission_states <- function(data, M) {
+    # Retrieving profiles
+    aa <- data$AminoAcids
+    dssp <- data$SecondaryStructure
+
+    aa_list <- lapply(aa,
+        function(x) substring(x, first=1:(nchar(x)), last=1:nchar(x))
+    )
+    dssp_list <- lapply(dssp, 
+        function(x) substring(x, first=1:(nchar(x)), last=1:nchar(x))
+    )
+    
+    frequencies <- table(paste(unlist(dssp_list), unlist(aa_list), sep=""))
+
+    # Assigning frequencies
+    for (i in seq(nrow(M))) {
+        for (j in seq(ncol(M))) {
+            row_name <- row.names(M)[i]
+            col_name <- colnames(M)[j]
+            freq_name <- paste0(row_name, col_name)
+            if (is.na(frequencies[freq_name])) {
+                M[i, j] <- 1
+            } else {
+                M[i, j] <- as.numeric(frequencies[freq_name])+1
+            }
+        }
+    }
+    # Relative frequencies
+    M <- M/rowSums(M)
+
+    # Return initial states matrix
+    return(M)
+}
+
+eigen_stationary_distribution <- function(T) {
+    # T transposed to get left eigenvectors of T
+    e <- eigen(t(exp(T)))
+    e_vec <- e$vectors
+    e_val <- e$values
+    e_val_one_index <- which(abs(e_val-1) < 1e-12)
+    stat_dist <- matrix(e_vec[, e_val_one_index]/
+        sum(e_vec[, e_val_one_index]), nrow=1, ncol=length(DSSP)
+    )
+    colnames(stat_dist) <- DSSP
+    print(paste("Eigenvalue:", e_val[e_val_one_index]))
+    print("Stationary distribution of transmission probabilities (eigenvalue approach): ")
+    return(stat_dist)
+}
+
+brute_force_stationary_distribution <- function(T) {
+    T <- exp(T)
+    while (sum(abs(T[1,]-T[2,])) > 1e-12) {
+        T <- T %*% T
+    }
+    print("Stationary distribution of transmission probabilities (brute-force approach): ")
+    print(T[1,])
+}
+
+run_viterbi_predictions <- function(data, params) {
+    pred_df <- data.frame(AminoAcids=data$AminoAcids, PredictedStructure=NA)
+    pred_df <- apply(pred_df, 1, function(row) {
+        viterbi(params$E, params$T, params$I, data.frame(AminoAcids=row["AminoAcids"]))
+    })
+    pred_df <- data.frame(t(sapply(pred_df, function(x) x[1:max(lengths(pred_df))])))
+    data$PredictedStructure <- pred_df$PredictedStructure
+    data <- apply(data, 2, as.character)
+    return(data)
+}
+
+run_random_predictions <- function(data, params) {
+    rand_struct <- apply(data, 1, function(row) {
+        paste0(sample(DSSP, nchar(row["AminoAcids"]), replace=TRUE), collapse="")
+    })
+    data <- cbind(data, RandomStructure=rand_struct)
+    return(data)
+}
+
+save_to_tsv <- function(data, file_path) {
+    write.table(data, file=file_path, sep="\t", row.names=FALSE, col.names=FALSE)
+}
+
+get_accuracies <- function(pred_df, column_name) {
+    accuracies <- apply(pred_df, 1, function(row) {
+        sum(
+            strsplit(row["SecondaryStructure"], "")[[1]] == strsplit(row[column_name], "")[[1]])/
+            nchar(row["SecondaryStructure"])
+    })
+    print(summary(accuracies))
+    return(accuracies)
+}
+
+```
+
+## (a) Data loading 
+
+Read `proteins_train.tsv`, `proteins_test.tsv` and `proteins_new.tsv` into the memory and store each in a data.frame.
+
+```{r}
+# Loading data
+prot_train_df <- loading_data(paste0(data_folder, "proteins_train.tsv"), sec_struct=TRUE)
+prot_test_df <- loading_data(paste0(data_folder, "proteins_test.tsv"), sec_struct=TRUE)
+prot_new_df <- loading_data(paste0(data_folder, "proteins_new.tsv"), sec_struct=FALSE)
+```
+
+## (b) Estimating parameters
+
+Estimate the vector of initial state probabilities I, the matrix of transition probabilities T and the matrix for emission probabilities E by using maximum likelihood, i.e., by counting how often each transition and each emission happened and how often each secondary structure was found at the beginning of a protein, respectively.
+
+$$
+I_i = P(Z_1 = i) = \frac{\#latent \; sequences \; start \; with \;  i}{\# sequences}
+$$
+
+$$
+E_{ij} = P(X_n=j|Z_n = i) = \frac{\#latent \; state \; i \; emits \; observable \;j}{\# latent \; state \; i \; emits \; anything}
+$$
+
+$$
+T_{ij} = P(Z_n=j|Z_{n-1} = i) = \frac{\#latent \; state \; i \; transits \; to \; state \;j}{\# latent \; state \; i \; transits \; to \; any \; other \; state}
+$$
+```{r}
+# Initialisation of parameters
+params <- init_matrices(prot_train_df)
+```
+
+# (c) Stationary distribution
+
+## Eigenvalues 
+
+We need left eigenvector for the stationary distribution:
+
+$$
+\pi = \pi  T
+$$
+
+```{r}
+eigen_stationary_distribution(params$T)
+```
+
+## Brute force 
+
+```{r}
+brute_force_stationary_distribution(params$T)
+```
+
+# (d) Predictions
+
+```{r}
+# Making predictions
+prot_test_df <- run_viterbi_predictions(prot_test_df, params)
+prot_new_df <- run_viterbi_predictions(prot_new_df, params)
+
+# Saving predictions
+save_to_tsv(prot_new_df, paste0(data_folder, "proteins_new_pred.tsv"))
+
+# Computing prediction accuracies
+print("Accuracy statistics of Viterbi predictions:")
+viterbi_acc <- get_accuracies(prot_test_df, column_name="PredictedStructure")
+
+# Making random "predictions"
+prot_test_df <- run_random_predictions(prot_test_df, params)
+print("Accuracy statistics of random 'predictions':")
+rand_acc <- get_accuracies(prot_test_df, column_name="RandomStructure")
+```
+
+# (e) Bootstrapping
+
+```{r}
+# Number of bootstrap runs
+n_bt <- 1000
+# Define storage dataframes
+I_bt <- matrix(0, length(DSSP), n_bt)
+E_bt <- array(0, dim=c(length(DSSP), length(AA), n_bt))
+T_bt <- array(0, dim=c(length(DSSP), length(DSSP), n_bt))
+
+# Bootstrapping
+for (i in 1:n_bt){
+    # Resample the dataframe
+    df_bt <- prot_train_df[sample(nrow(prot_train_df), replace=T),]
+    
+    est <- init_matrices(df_bt)
+
+    # Estimate current run
+    I_est <- exp(est$I)
+    E_est <- exp(est$E)
+    T_est <- exp(est$T)
+    
+    # Concatenate
+    I_bt[, i] <- I_est
+    E_bt[, , i] <- E_est
+    T_bt[, , i] <- T_est
+    
+    if (sum(is.na(T_est)) > 0){
+        break
+    }
+}
+```
+
+```{r}
+I_ci <- apply(I_bt, 1, function(x) {
+  down <- quantile(x, 0.025)
+  up <- quantile(x, 0.975)
+  return(c(down, up))
+})
+
+E_ci <- apply(E_bt, c(1, 2), function(x) {
+  down <- quantile(x, 0.025)
+  up <- quantile(x, 0.975)
+  return(c(down, up))
+})
+
+T_ci <- apply(T_bt, c(1, 2), function(x) {
+  down <- quantile(x, 0.025)
+  up <- quantile(x, 0.975)
+  return(c(down, up))
+})
+
+I_ci
+head(E_ci)
+head(T_ci)
+```
+
+# (g) Comparison
+
+```{r}
+# Plot box plot of accuracies
+boxplot(rand_acc, viterbi_acc, ylim=c(0, 1), ylab="Accuracy", xlab="Algorithm",
+    names=c("Random", "Viterbi")
+)
+```
+
+## Render this .rmd into a pdf
+
+```{r, eval=FALSE}
+library(rmarkdown)
+render("viterbi.Rmd", pdf_document(TRUE), "viterbi.pdf")
+```

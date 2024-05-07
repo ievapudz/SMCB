@@ -1,0 +1,206 @@
+---
+title: "Project 9"
+output:
+  pdf_document: 
+   latex_engine: xelatex
+  html_document: default
+  
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(ggplot2)
+library(pcalg)
+library(BiDAG)
+library(graph)
+```
+## Problem 24: Testing for marginal correlation 
+
+Using the data from MVN DAG.rds, display the observations of A and B in a scatterplot. What does the plot suggest about their (marginal) correlation? Does it agree with Figure 2? Use the function cor.test() to test the null hypothesis of no correlation between A and B. What is your conclusion?
+
+```{r}
+# load the data
+data <- readRDS("MVN_DAG.rds")
+
+# plot the scatterplot 
+ggplot(data, aes(x = A, y = B)) +
+  geom_point()+
+  theme(plot.title = element_text(hjust = 0.5))+
+  ggtitle("Scatterplot observations of A and B") +
+  xlab("A") +
+  ylab("B")+
+  geom_smooth(method = 'lm')
+
+```
+
+The plot suggests that A and B are uncorrelated which is also seen in the added linear regression line as its almost horizontal around 0. This agrees with Figure 2 as the graph structure also suggests a marginal correlation of 0, so independence. 
+
+```{r}
+# hypothesis testing 
+
+cor.test(data$A,data$B)
+```
+Based on the calculated p-value of 0.8401 there seems to be no correlation between A and B and the null hypothesis can be accepted. This agrees with both the scatterplot and the graph, A and B seem to be (marginally) independent/uncorrelated. 
+
+# Problem 25: Testing for partial correlation 
+
+Linearly regress A on C (that is, with A as the response variable and C as the explanatory variable). Compute and store the residuals. 
+
+```{r}
+residuals_AC <- residuals(lm(A ~ C, data= data))
+```
+
+Linearly regress B on C. Compute and store the residuals.
+
+```{r}
+residuals_BC <- residuals(lm(B ~ C, data= data))
+```
+
+Plot the residuals of A (regressed on C) against the residuals of B (regressed on C). What do you see?
+
+```{r}
+residuals_df <- data.frame('A_residuals' = residuals_AC, 'B_residuals' = residuals_BC)
+
+ggplot(residuals_df, aes(x = A_residuals, y = B_residuals)) +
+  geom_point()+
+  theme(plot.title = element_text(hjust = 0.5))+
+  ggtitle("Scatterplot observations of A and B (both regressed on C) residuals") +
+  xlab("A_residuals") +
+  ylab("B_residuals")+
+  geom_smooth(method = 'lm')
+
+```
+One can observe a negative linear relationship between the residuals of A and B in the scatterplot, indicating a negative correlation between the residuals of A (regressed on C) and residuals of B (regressed on C). 
+
+Use the function cor.test() to test the null hypothesis of no correlation between the residuals of A (regressed on C) and the residuals of B (regressed on C). What is your conclusion? Does this agree with your expectation based on the underlying DAG in Figure 2?
+
+```{r}
+# hypothesis testing 
+cor.test(residuals_df$A_residuals, residuals_df$B_residuals)
+```
+
+With the calculated p-value of 6.6e-13 which is << 5% the null hypothesis of no correlation between residuals of A and B can be rejected. This suggests that A and B residuals regressed on C are (negatively) correlated wich is in line with the scatter plot as well as the underlying DAG as A and B are not conditionally independent given C (head-to-head and C part of set C, v-structure A -> C <- B).
+
+# Problem 26: Running the PC algorithm 
+
+Install and load the R package pcalg. Use the function pc() to run the PC algorithm on the data in MVN DAG.rds, and plot the result. For hints, see footnote 4. Does the algorithm successfully learn the structure of the data-generating graph in Figure 2? How is the result affected by the significance level α for the conditional independence tests?
+
+```{r}
+# run PC algorithm 
+pc <- pc(list(C = cor(data), n = nrow(data)),
+         indepTest = gaussCItest,
+         alpha = 0.05, 
+         labels = colnames(data)
+         )
+plot(pc, main = "Graph structure alpha = 0.05")
+```
+```{r}
+# try out different alphas 
+pc_0.01 <- pc(list(C = cor(data), n = nrow(data)),
+         indepTest = gaussCItest,
+         alpha = 0.01, 
+         labels = colnames(data))
+plot(pc_0.01, main = "Graph structure alpha = 0.01")
+```
+```{r}
+pc_0.001 <- pc(list(C = cor(data), n = nrow(data)),
+         indepTest = gaussCItest,
+         alpha = 0.001, 
+         labels = colnames(data))
+plot(pc_0.001, main = "Graph structure alpha = 0.001")
+```
+```{r}
+pc_0.00001 <- pc(list(C = cor(data), n = nrow(data)),
+         indepTest = gaussCItest,
+         alpha = 0.00001, 
+         labels = colnames(data))
+plot(pc_0.00001, main = "Graph structure alpha = 0.00001")
+```
+```{r}
+pc_0.9 <- pc(list(C = cor(data), n = nrow(data)),
+         indepTest = gaussCItest,
+         alpha = 0.9, 
+         labels = colnames(data))
+plot(pc_0.9, main = "Graph structure alpha = 0.9")
+```
+With the standard alpha = 0.05 the algorithm successfully learns the structure of the DAG in Figure 2 except the edge between B and E is wrong/ not determined. The alpha affects number of detected edges, the higher it is the more edges are possibly added to the learned DAG (see alpha = 0.9). With lower alphas up to a certain point nothing changes (see alpha = 0.01) but if we go even lower, see alpha = 0.001, the learned structure also is changed. If we would go even smaller, less edges are added (see 0.00001). 
+
+
+# Problem 27: Running the partition MCMC algorithm 
+
+Install and load the R package BiDAG. Initialize the parameters with Score <- scoreparameters("bge", data) on the data in MVN DAG.rds using the Bayesian Gaussian equivalent (BGe) score. Run the iterative MCMC algorithm with maxBN <- learnBN(Score, algorithm = "orderIter") to learn the maximum scoring DAG and plot its equivalence class maxBN$CPDAG. How is the result affected by the hyper-parameter α_μ? Run the partition MCMC algorithm with partitionsample <- sampleBN(Score, algorithm = "partition", startspace = maxBNendspace) in order to sample from the posterior distribution over graph structures, where the search space is determined from the maximum scoring DAG. Compute the marginal posterior probabilities of the edges with edgesposterior <-edgep(partitionsample, pdag=TRUE) and plot them in a heatmap.
+
+```{r}
+Score <- scoreparameters("bge", data)
+maxBN <- learnBN(Score, algorithm = "orderIter")
+```
+```{r}
+plot(maxBN$CPDAG)
+```
+
+```{r}
+plot(graphAM(as.matrix(maxBN$CPDAG),edgemode = "directed"))
+```
+
+
+```{r}
+partitionsample <- sampleBN(Score, algorithm = "partition", startspace = maxBN$endspace)
+edgesposterior <- edgep(partitionsample, pdag=TRUE)
+heatmap(edgesposterior, Colv=NA, Rowv=NA, scale='none')
+```
+
+```{r}
+#try out for different α_μ
+Score <- scoreparameters("bge", data,  bgepar = list(am = 0.1, aw = NULL))
+maxBN <- learnBN(Score, algorithm = "orderIter")
+plot(maxBN$CPDAG)
+```
+```{r}
+plot(graphAM(as.matrix(maxBN$CPDAG),edgemode = "directed"))
+```
+```{r}
+partitionsample <- sampleBN(Score, algorithm = "partition", startspace = maxBN$endspace)
+edgesposterior <-edgep(partitionsample, pdag=TRUE)
+heatmap(edgesposterior, Colv=NA, Rowv=NA, scale='none')
+```
+
+```{r}
+Score <- scoreparameters("bge", data,  bgepar = list(am = 0.001, aw = NULL))
+maxBN <- learnBN(Score, algorithm = "orderIter")
+plot(maxBN$CPDAG)
+```
+```{r}
+plot(graphAM(as.matrix(maxBN$CPDAG),edgemode = "directed"))
+```
+```{r}
+partitionsample <- sampleBN(Score, algorithm = "partition", startspace = maxBN$endspace)
+edgesposterior <-edgep(partitionsample, pdag=TRUE)
+heatmap(edgesposterior, Colv=NA, Rowv=NA, scale='none')
+```
+
+```{r}
+Score <- scoreparameters("bge", data, bgepar = list(am = 100, aw = NULL))
+maxBN <- learnBN(Score, algorithm = "orderIter")
+plot(maxBN$CPDAG)
+```
+```{r}
+plot(graphAM(as.matrix(maxBN$CPDAG),edgemode = "directed"))
+```
+```{r}
+partitionsample <- sampleBN(Score, algorithm = "partition", startspace = maxBN$endspace)
+edgesposterior <-edgep(partitionsample, pdag=TRUE)
+heatmap(edgesposterior, Colv=NA, Rowv=NA, scale='none')
+
+```
+
+The higher the α_μ, the denser the resulting graph and also the higher the marginal posterior probabilites of the edges (seen in darker rectangles in the heatmap). 
+```{r, eval=FALSE}
+library(rmarkdown)
+rmarkdown::render("project9.Rmd", output_format = "pdf_document")
+
+```

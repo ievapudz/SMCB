@@ -1,0 +1,113 @@
+---
+title: "Project 7"
+output:
+  pdf_document: 
+    extra_dependencies: ['amsmath']
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
+
+library(foreach)
+library(doParallel)
+```
+
+# Problem 19
+## Message passing on a chain
+
+We will now use R to perform the message passing shown in Figure 1. Suppose that we have the following (conditional) probability distributions:
+
+```{r}
+# Conditional probabilities
+x1 <- 1/3
+x2_1 <- c(4/5, 2/3)
+x3_2 <- c(5/7, 1/3)
+x4_3 <- c(3/5,  2/5)
+x5_4 <- c(1/2, 7/9)
+```
+
+Note that these equations fully determine each (conditional) probability distribution, since $X_i \in \{0, 1\}$ for $i \in \{1, . . . , 5\}$.
+
+## (a) Store clique potentials in an R object
+
+```{r}
+# Potential matrix
+pot <- array(dim = c(2, 2, 4), dimnames = list(c("0", "1"), c("0", "1"),
+c("Psi12", "Psi23", "Psi34", "Psi45")))
+
+# Filling it up
+pot[, , "Psi12"] <- cbind(1-x2_1, x2_1) * c(1-x1,x1)
+pot[, , "Psi23"] <- cbind(1-x3_2, x3_2) 
+pot[, , "Psi34"] <- cbind(1-x4_3, x4_3) 
+pot[, , "Psi45"] <- cbind(1-x5_4, x5_4) 
+
+pot
+```
+
+## (b) Computing forward messages
+
+```{r}
+# Forward message
+mu_a <- array(dim = c(5, 2), dimnames = list(c("X1", "X2", "X3", "X4", "X5"), c("0", "1")))
+
+# Initialization
+mu_a[1, ] <- 1
+
+# Computation
+for (i in 2:5){
+  mu_a[i, ] <- mu_a[i-1, ] %*% pot[, , i-1]
+}
+
+mu_a
+```
+
+## (c) Computing backward message
+
+```{r}
+# Backward message
+mu_b <- array(dim = c(5, 2), dimnames = list(c("X1", "X2", "X3", "X4", "X5"), c("0", "1")))
+
+# Initialization
+mu_b[5, ] <- 1
+
+# Computation
+for (i in 4:1){
+  mu_b[i, ] <- mu_b[i+1, ] %*% pot[, , i]
+}
+
+mu_b
+```
+
+## (d)) Compute the marginal probability distribution for each no
+
+```{r}
+# Marginal prob.
+marg <- array(dim = c(5, 2), dimnames = list(c("X1", "X2", "X3", "X4", "X5"), c("0", "1")))
+
+# Calculate
+for (i in 1:5){
+  marg[i, ] <- mu_a[i, ] * t(mu_b)[, i]
+}
+
+marg
+```
+
+### Normalizing constant Z
+
+```{r}
+Z <- rowSums(marg)
+Z
+```
+
+
+### Normalizing
+```{r}
+marg <- marg/Z
+print(rowSums(marg))
+print(marg)
+```
+
+```{r, eval=FALSE}
+library(rmarkdown)
+render("ex7.Rmd", pdf_document(TRUE), "Indilewitsch_Toidze_Houhamdi_Pudziuvelyte_Project7.pdf")
+```
