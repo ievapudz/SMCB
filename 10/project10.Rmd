@@ -17,22 +17,16 @@ library(glmnet)
 library(pROC)
 ```
 
-## Loading data
-
 ```{r}
 load(file='yeastStorey.rda')
 ```
 
 ```{r}
-print(nrow(data))
-print(ncol(data))
+print(paste("Number of samples (N):", nrow(data)))
+print(paste("Number of features (p):", ncol(data)))
 ```
 
-```{r}
-head(data)
-```
-
-## Shuffling data (splitting into training and testing)
+## Splitting data into training and testing subsets
 
 ```{r}
 set.seed(42)
@@ -41,23 +35,17 @@ trainData <- data[trainIndex,]
 testData <- data[-trainIndex,]
 ```
 
-```{r}
-trainData
-```
-
-```{r}
-testData
-```
-
 ## Cross-validation of elastic-net model
 
 ```{r}
+# Preparing data for cv.glmnet
 x <- trainData[, !(names(trainData) %in% c("Marker"))]
 x <- as.matrix(x)
 y <- trainData$Marker
 ```
 
 ```{r}
+# Executing 10-fold CV for each value of alpha
 foldid <- sample(1:10, size=length(y), replace=TRUE)
 alphas <- seq(0, 1, by=0.1)
 
@@ -69,32 +57,44 @@ resultsCV <- lapply(alphas, elasticNetCVAlpha)
 ```
 
 ```{r}
+# Finding the optimal alpha
 minMeanCVMIdx <- 1
 minMeanCVM <- mean(resultsCV[[1]]$cvm)
-for(i in 1:11) { 
-  if(minMeanCVM > mean(resultsCV[[i]]$cvm)) { minMeanCVM <- mean(resultsCV[[i]]$cvm); minMeanCVMIdx <- i}
+for(i in 1:length(alphas)) { 
+  if(minMeanCVM > mean(resultsCV[[i]]$cvm)) { 
+    minMeanCVM <- mean(resultsCV[[i]]$cvm)
+    minMeanCVMIdx <- i
+  }
+  # Reporting mean of mean cross-validated error of each alpha
   print(paste0("alpha=", alphas[i], "; error=", mean(resultsCV[[i]]$cvm))) 
 }
 ```
 ### Finding optimal alpha
 
-$\alpha$ with which mean of mean cross-validated error is the smallest: $\alpha=$.
-This alpha will be considered as optimal.
+$\alpha$ with which mean of mean cross-validated error is the smallest: 
+$\alpha=$ `r alphas[minMeanCVMIdx]`.
+This $\alpha$ will be considered as optimal.
 
 ```{r}
 print(paste("Min. mean of mean cross-validated error:", minMeanCVM))
 optimalAlphaIdx <- minMeanCVMIdx
+optimalAlpha <- alphas[optimalAlphaIdx]
 ```
 
 ### Plotting mean cross-validated error
 
-Cross-validated error function is binomial deviance.
+Cross-validated error function is binomial deviance. The plot of $log(\lambda)$
+versus mean cross-validated error is done using results retrieved with 
+$\alpha=$ `r optimalAlpha`.
 
 ```{r}
-plot(resultsCV[[optimalAlphaIdx]], ylab="cross-validated error")
+plot(resultsCV[[optimalAlphaIdx]], ylab="mean cross-validated error")
 ```
 
 ### Plotting trace curve of coefficients
+
+The plot of $log(\lambda)$ versus coefficients is done using results retrieved 
+with $\alpha=$ `r optimalAlpha`.
 
 ```{r}
 plot(resultsCV[[optimalAlphaIdx]]$glmnet.fit, "lambda")
@@ -104,12 +104,34 @@ plot(resultsCV[[optimalAlphaIdx]]$glmnet.fit, "lambda")
 
 ```{r}
 optimalLambdaIdx <- which.min(resultsCV[[optimalAlphaIdx]]$cvm)
-print(paste("Optimal lambda:", resultsCV[[optimalAlphaIdx]]$lambda[[optimalLambdaIdx]]))
+optimalLambda <- resultsCV[[optimalAlphaIdx]]$lambda[[optimalLambdaIdx]]
 ```
 
-## Fitting model
+Optimal $\lambda=$ `r optimalLambda`.
+
+## Fitting model on the whole training set
+
+```{r}
+trainedModel <- glmnet(x, y, family="binomial", alpha=optimalAlpha, lambda=optimalLambda)
+trainedModel
+```
 
 ## Testing model
+
+```{r}
+# Preparing data for inference using fitted glmnet
+xTest <- testData[, !(names(testData) %in% c("Marker"))]
+xTest <- as.matrix(xTest)
+yTest <- testData$Marker
+```
+
+```{r}
+# Making predictions and evaluating performance
+predictions <- predict(trainedModel, newx=xTest)
+resultsTest <- assess.glmnet(predictions, newy=yTest, family="binomial")
+
+roc(yTest, predictions, plot=TRUE)
+```
 
 ```{r, eval=FALSE}
 library(rmarkdown)
