@@ -9,6 +9,166 @@ output:
 knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
 ```
 
+# Problem 27
+
+Showing that $X \hat{\beta}^{(1)} = X \hat{\beta}^{(2)}$ 
+($\hat{\beta}^{(1)} = \hat{\beta}^{(2)}$) give the same Lasso
+predictions.
+
+\textbf{Proof}
+
+The statement will be proven by contradiction. Let's assume that $\hat{\beta}^{(1)} \neq \hat{\beta}^{(2)}$.
+
+Let's define $f(u)=||y-u||^2_2$, $l_1 = ||u||_1$, and $g(u)=\frac{1}{2}f(u)+\lambda l_1(u)$.
+
+Let's say that $u = \alpha \hat{\beta}^{(1)} + (1-\alpha)\hat{\beta}^{(2)}$, 
+which is in the Lasso solution set for $\forall \alpha \in (0, 1).$ 
+
+\begin{equation}
+g\Bigl(\alpha \hat{\beta}^{(1)} + (1-\alpha)\hat{\beta}^{(2)}\Bigr) = 
+\frac{1}{2}f\Bigl(\alpha \hat{\beta}^{(1)} + (1-\alpha)\hat{\beta}^{(2)}\Bigr)+
+\lambda l_1\Bigl(\alpha \hat{\beta}^{(1)} + (1-\alpha)\hat{\beta}^{(2)}\Bigr)\overset{\text{convexity of }l_1}\leq
+\end{equation}
+
+\begin{equation}
+\leq \frac{1}{2}f\Bigl(\alpha \hat{\beta}^{(1)} + (1-\alpha)\hat{\beta}^{(2)}\Bigr)+
+\lambda \alpha l_1\Bigl(\hat{\beta}^{(1)}\Bigr) + \lambda(1-\alpha)l_1\Bigl(\hat{\beta}^{(2)}\Bigr)\overset{\text{strict convexity of }f}<
+\end{equation}
+
+\begin{equation}
+< \frac{1}{2}\alpha f\Bigl(\hat{\beta}^{(1)}\Bigr) + \frac{1}{2}(1-\alpha)f\Bigl(\hat{\beta}^{(2)}\Bigr)+
+\lambda \alpha l_1\Bigl(\hat{\beta}^{(1)}\Bigr) + \lambda(1-\alpha)l_1\Bigl(\hat{\beta}^{(2)}\Bigr)=
+\end{equation}
+
+The following lines display rearrangement of members.
+
+\begin{equation}
+= \frac{1}{2}\alpha f\Bigl(\hat{\beta}^{(1)}\Bigr) + \lambda \alpha l_1\Bigl(\hat{\beta}^{(1)}\Bigr) + \frac{1}{2}(1-\alpha)f\Bigl(\hat{\beta}^{(2)}\Bigr)+ \lambda(1-\alpha)l_1\Bigl(\hat{\beta}^{(2)}\Bigr)=
+\end{equation}
+
+\begin{equation}
+= \alpha\Bigl[\frac{1}{2} f\Bigl(\hat{\beta}^{(1)}\Bigr) + \lambda l_1\Bigl(\hat{\beta}^{(1)}\Bigr)\Bigr] + (1-\alpha)\Bigl[\frac{1}{2}f\Bigl(\hat{\beta}^{(2)}\Bigr)+ \lambda l_1\Bigl(\hat{\beta}^{(2)}\Bigr)\Bigr]=
+\end{equation}
+
+\begin{equation}
+= \alpha c^*+ (1-\alpha)c^* = \alpha c^*+ c^*-\alpha c^* = c^*
+\end{equation}
+
+\begin{equation}
+\Rightarrow g(u) = g\Bigl(\alpha \hat{\beta}^{(1)} + (1-\alpha)\hat{\beta}^{(2)}\Bigr) < c^* 
+\end{equation}
+
+It implies that $u$ does not belong to the solution set of Lasso, which 
+imposes contradiction. Therefore our initial assumption that 
+$\hat{\beta}^{(1)} \neq \hat{\beta}^{(2)}$ is incorrect. $\square$
+
+# Problem 28 (a)
+
+Show that for some $\lambda$, the Ridge regression coefficients are equivalent 
+to the maximum a posteriori (MAP) estimator, if we assume a normal prior for 
+the coefficients.
+
+\textbf{Proof}
+
+Solution of Ridge regression can be written as (with $\lambda \geq 0$):
+
+\begin{equation}
+\beta_{Ridge} = \underset{\beta}{argmin} \Bigl(||y-X\beta||^2+ \lambda||\beta||^2 \Bigr)
+\end{equation}
+
+Posterior distribution of $\beta$ is proportional to product of likelihood and 
+the prior:
+
+\begin{equation}
+p(\beta | X, y) \propto p(y|X, \beta)\cdot p(\beta)
+\end{equation}
+
+Since $y = X\beta + \epsilon$, where $\epsilon \sim N(0, \sigma^2I_n)$, 
+$y \sim N(X\beta, \sigma^2I_n)$. Therefore $p(y|X, \beta)$ follows 
+$N(X\beta, \sigma^2I_n)$ and $p(\beta)$ is a given prior.
+
+\begin{equation*}
+\beta_{MAP} = \underset{\beta}{argmax}\Bigl( p(y|X, \beta)\cdot p(\beta) \Bigr) =
+\underset{\beta}{argmin}\Bigl( -ln(p(y|X, \beta)\cdot p(\beta)) \Bigr)=
+\end{equation*}
+
+\begin{equation}
+=\underset{\beta}{argmin}\Bigl( -ln(p(y|X, \beta))-ln(p(\beta)) \Bigr)
+\end{equation}
+
+\begin{equation*}
+ln(p(y|X, \beta)) = ln\Bigl( \prod_{i=1}^{n}\frac{1}{\sqrt{2\pi}\sigma} exp(-\frac{1}{2}\frac{(y_i-X\beta_i)^2}{\sigma^2})\Bigr)=
+ln\Bigl(\frac{n}{\sqrt{2\pi}\sigma}\Bigr)+\sum_{i=1}^{n}ln\Bigl( exp(-\frac{1}{2}\frac{(y_i-X\beta_i)^2}{\sigma^2})\Bigr)=
+\end{equation*}
+
+\begin{equation}
+=ln\Bigl(\frac{n}{\sqrt{2\pi}\sigma}\Bigr)+\sum_{i=1}^{n}\Bigl( -\frac{1}{2}\frac{(y_i-X\beta_i)^2}{\sigma^2}\Bigr)
+\end{equation}
+
+\begin{equation*}
+ln(p(\beta)) = ln\Bigl( \prod_{k=1}^{p}\frac{1}{\sqrt{2\pi}\sigma_{\beta}} exp(-\frac{1}{2}\frac{\beta_k^2}{\sigma^2_{\beta}})\Bigr)=
+ln\Bigl(\frac{p}{\sqrt{2\pi}\sigma_{\beta}}\Bigr)+\sum_{k=1}^{p}ln\Bigl( exp(-\frac{1}{2}\frac{\beta_k^2}{\sigma^2_{\beta}})\Bigr)=
+\end{equation*}
+
+\begin{equation}
+=ln\Bigl(\frac{p}{\sqrt{2\pi}\sigma_{\beta}}\Bigr)+\sum_{k=1}^{p}\Bigl( -\frac{1}{2}\frac{\beta_k^2}{\sigma^2_{\beta}}\Bigr)
+\end{equation}
+
+By collecting members that depend on $\beta$, we get $\beta_{MAP}$ expression:
+
+\begin{equation}
+\beta_{MAP} = \underset{\beta}{argmin} \Bigl( \frac{1}{2\sigma^2}||y-X\beta||^2+ \frac{1}{2\sigma^2_{\beta}}||\beta||^2 \Bigr)\overset{|\cdot2\sigma^2}=
+\underset{\beta}{argmin} \Bigl(||y-X\beta||^2+ \frac{\sigma^2}{\sigma^2_{\beta}}||\beta||^2 \Bigr)
+\end{equation}
+
+\begin{equation*}
+\Rightarrow \lambda = \frac{\sigma^2}{\sigma^2_{\beta}}
+\end{equation*}
+
+For $\lambda = \frac{\sigma^2}{\sigma^2_{\beta}}$ Ridge regression coefficients
+are equivalent to the MAP estimator, if normal prior for coefficients is assumed.
+
+# Problem 28 (b)
+
+Show that for some $\lambda$, the Lasso regression coefficients are equivalent 
+to the maximum a posteriori (MAP) estimator, if we assume prior $\pi(\beta) = \prod_{k=1}^{p}\frac{1}{2b}exp(-\frac{|\beta_k|}{b})$.
+
+\textbf{Proof}
+
+Solution of Lasso regression can be written as (with $\lambda \geq 0$):
+
+\begin{equation}
+\beta_{Lasso} = \underset{\beta}{argmin} \Bigl(||y-X\beta||^2+ \lambda||\beta||_1 \Bigr)
+\end{equation}
+
+Posterior distribution of $\beta$ is proportional to product of likelihood and 
+the prior and since $y$, $X$, $\beta$, and $\epsilon$ stay the same as in part 
+\textit{a}, we can recycle the computations of log-likelihood and take a look
+only at the part of the prior (having $\pi(\beta) = p(\beta)$).
+
+\begin{equation*}
+ln(p(\beta)) = ln\Bigl( \prod_{k=1}^{p}\frac{1}{2b}exp(-\frac{|\beta_k|}{b})\Bigr)=
+ln\Bigl(\frac{p}{2b}\Bigr)+\sum_{k=1}^{p}ln\Bigl(exp(-\frac{|\beta_k|}{b})\Bigr)=
+\end{equation*}
+
+\begin{equation}
+=ln\Bigl(\frac{p}{2b}\Bigr)+\sum_{k=1}^{p}\Bigl(-\frac{|\beta_k|}{b}\Bigr)
+\end{equation}
+
+By collecting members that depend on $\beta$, we get $\beta_{MAP}$ expression:
+
+\begin{equation}
+\beta_{MAP} = \underset{\beta}{argmin} \Bigl( \frac{1}{2\sigma^2}||y-X\beta||^2+ \frac{1}{b}||\beta||_1 \Bigr)\overset{|\cdot2\sigma^2}=
+\underset{\beta}{argmin} \Bigl(||y-X\beta||^2+ \frac{2\sigma^2}{b}||\beta||_1 \Bigr)
+\end{equation}
+
+\begin{equation*}
+\Rightarrow \lambda = \frac{2\sigma^2}{b}
+\end{equation*}
+
+For $\lambda = \frac{2\sigma^2}{b}$ Lasso regression coefficients
+are equivalent to the MAP estimator, if the given prior $\pi(\beta)$ is assumed.
+
 # Problem 29
 
 ```{r}
