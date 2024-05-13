@@ -98,20 +98,20 @@ $N(X\beta, \sigma^2I_n)$ and $p(\beta)$ is a given prior.
 
 \begin{equation*}
 ln(p(y|X, \beta)) = ln\Bigl( \prod_{i=1}^{n}\frac{1}{\sqrt{2\pi}\sigma} exp(-\frac{1}{2}\frac{(y_i-X\beta_i)^2}{\sigma^2})\Bigr)=
-ln\Bigl(\frac{n}{\sqrt{2\pi}\sigma}\Bigr)+\sum_{i=1}^{n}ln\Bigl( exp(-\frac{1}{2}\frac{(y_i-X\beta_i)^2}{\sigma^2})\Bigr)=
+ln\Bigl(\frac{1}{\sqrt{2\pi}\sigma}\Bigr)^n+\sum_{i=1}^{n}ln\Bigl( exp(-\frac{1}{2}\frac{(y_i-X\beta_i)^2}{\sigma^2})\Bigr)=
 \end{equation*}
 
 \begin{equation}
-=ln\Bigl(\frac{n}{\sqrt{2\pi}\sigma}\Bigr)+\sum_{i=1}^{n}\Bigl( -\frac{1}{2}\frac{(y_i-X\beta_i)^2}{\sigma^2}\Bigr)
+=ln\Bigl(\frac{1}{\sqrt{2\pi}\sigma}\Bigr)^n+\sum_{i=1}^{n}\Bigl( -\frac{1}{2}\frac{(y_i-X\beta_i)^2}{\sigma^2}\Bigr)
 \end{equation}
 
 \begin{equation*}
 ln(p(\beta)) = ln\Bigl( \prod_{k=1}^{p}\frac{1}{\sqrt{2\pi}\sigma_{\beta}} exp(-\frac{1}{2}\frac{\beta_k^2}{\sigma^2_{\beta}})\Bigr)=
-ln\Bigl(\frac{p}{\sqrt{2\pi}\sigma_{\beta}}\Bigr)+\sum_{k=1}^{p}ln\Bigl( exp(-\frac{1}{2}\frac{\beta_k^2}{\sigma^2_{\beta}})\Bigr)=
+ln\Bigl(\frac{1}{\sqrt{2\pi}\sigma_{\beta}}\Bigr)^p+\sum_{k=1}^{p}ln\Bigl( exp(-\frac{1}{2}\frac{\beta_k^2}{\sigma^2_{\beta}})\Bigr)=
 \end{equation*}
 
 \begin{equation}
-=ln\Bigl(\frac{p}{\sqrt{2\pi}\sigma_{\beta}}\Bigr)+\sum_{k=1}^{p}\Bigl( -\frac{1}{2}\frac{\beta_k^2}{\sigma^2_{\beta}}\Bigr)
+=ln\Bigl(\frac{1}{\sqrt{2\pi}\sigma_{\beta}}\Bigr)^p+\sum_{k=1}^{p}\Bigl( -\frac{1}{2}\frac{\beta_k^2}{\sigma^2_{\beta}}\Bigr)
 \end{equation}
 
 By collecting members that depend on $\beta$, we get $\beta_{MAP}$ expression:
@@ -148,11 +148,11 @@ only at the part of the prior (having $\pi(\beta) = p(\beta)$).
 
 \begin{equation*}
 ln(p(\beta)) = ln\Bigl( \prod_{k=1}^{p}\frac{1}{2b}exp(-\frac{|\beta_k|}{b})\Bigr)=
-ln\Bigl(\frac{p}{2b}\Bigr)+\sum_{k=1}^{p}ln\Bigl(exp(-\frac{|\beta_k|}{b})\Bigr)=
+ln\Bigl(\frac{1}{2b}\Bigr)^p+\sum_{k=1}^{p}ln\Bigl(exp(-\frac{|\beta_k|}{b})\Bigr)=
 \end{equation*}
 
 \begin{equation}
-=ln\Bigl(\frac{p}{2b}\Bigr)+\sum_{k=1}^{p}\Bigl(-\frac{|\beta_k|}{b}\Bigr)
+=ln\Bigl(\frac{1}{2b}\Bigr)^p+\sum_{k=1}^{p}\Bigl(-\frac{|\beta_k|}{b}\Bigr)
 \end{equation}
 
 By collecting members that depend on $\beta$, we get $\beta_{MAP}$ expression:
