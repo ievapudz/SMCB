@@ -276,6 +276,18 @@ trainedModel <- glmnet(x, y, family="binomial", alpha=optimalAlpha, lambda=optim
 trainedModel
 ```
 
+```{r}
+# Non-zero coefficients
+coef(trainedModel)
+```
+
+Selected variables were those that are associated with non-zero coefficients.
+
+```{r}
+# Selected variables
+which(rowSums(coef(trainedModel)) != 0)
+```
+
 ## Testing model
 
 ```{r}
