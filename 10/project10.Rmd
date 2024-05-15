@@ -11,15 +11,15 @@ knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
 
 # Problem 27
 
-Showing that $X \hat{\beta}^{(1)} = X \hat{\beta}^{(2)}$ 
-($\hat{\beta}^{(1)} = \hat{\beta}^{(2)}$) give the same Lasso
+Showing that $X \hat{\beta}^{(1)} = X \hat{\beta}^{(2)}$, 
+$\hat{\beta}^{(1)}$ and $\hat{\beta}^{(2)}$) give the same Lasso
 predictions.
 
 \textbf{Proof}
 
 The statement will be proven by contradiction. Let's assume that $\hat{\beta}^{(1)} \neq \hat{\beta}^{(2)}$.
 
-Let's define $f(u)=||y-u||^2_2$, $l_1 = ||u||_1$, and $g(u)=\frac{1}{2}f(u)+\lambda l_1(u)$.
+Let's define $f(u)=||y-u||^2_2$, $l_1(u) = ||u||_1$, and $g(u)=\frac{1}{2}f(u)+\lambda l_1(u)$.
 
 Let's say that $u = \alpha \hat{\beta}^{(1)} + (1-\alpha)\hat{\beta}^{(2)}$, 
 which is in the Lasso solution set for $\forall \alpha \in (0, 1).$ 
@@ -60,7 +60,7 @@ The following lines display rearrangement of members.
 
 It implies that $u$ does not belong to the solution set of Lasso, which 
 imposes contradiction. Therefore our initial assumption that 
-$\hat{\beta}^{(1)} \neq \hat{\beta}^{(2)}$ is incorrect. $\square$
+$X\hat{\beta}^{(1)} \neq X\hat{\beta}^{(2)}$ is incorrect. $\square$
 
 # Problem 28 (a)
 
@@ -83,9 +83,9 @@ the prior:
 p(\beta | X, y) \propto p(y|X, \beta)\cdot p(\beta)
 \end{equation}
 
-Since $y = X\beta + \epsilon$, where $\epsilon \sim N(0, \sigma^2I_n)$, 
-$y \sim N(X\beta, \sigma^2I_n)$. Therefore $p(y|X, \beta)$ follows 
-$N(X\beta, \sigma^2I_n)$ and $p(\beta)$ is a given prior.
+Since $y = X\beta + \epsilon$, where $\epsilon \sim N(0, \sigma^2I_n)$. 
+Therefore $p(y|X, \beta)$ follows 
+$N(X\beta, \sigma^2I_n)$ and $p(\beta) = \prod_{k=1}^p \frac{1}{\sqrt{2\pi}\sigma_{\beta}}exp(-\frac{1}{2}\frac{\beta_k^2}{\sigma_{\beta}^2})$.
 
 \begin{equation*}
 \beta_{MAP} = \underset{\beta}{argmax}\Bigl( p(y|X, \beta)\cdot p(\beta) \Bigr) =
@@ -142,7 +142,7 @@ Solution of Lasso regression can be written as (with $\lambda \geq 0$):
 \end{equation}
 
 Posterior distribution of $\beta$ is proportional to product of likelihood and 
-the prior and since $y$, $X$, $\beta$, and $\epsilon$ stay the same as in part 
+the prior and, since $y$, $X$, $\beta$, and $\epsilon$ stay the same as in part 
 \textit{a}, we can recycle the computations of log-likelihood and take a look
 only at the part of the prior (having $\pi(\beta) = p(\beta)$).
 
